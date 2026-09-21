@@ -12,9 +12,7 @@
 
 use std::io::Write;
 
-use mdo_cdr::{
-    DefenseContext, DefenseVerdict, FileDefender, FileKind, policy::DefensePolicy,
-};
+use mdo_cdr::{DefenseContext, DefenseVerdict, FileDefender, FileKind, policy::DefensePolicy};
 
 fn defender() -> FileDefender {
     FileDefender::new(DefensePolicy::default())
