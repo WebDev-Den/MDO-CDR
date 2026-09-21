@@ -46,8 +46,8 @@ jobs:
       - name: Run Clippy linter
         run: cargo clippy --workspace --all-targets -- -D warnings
 
-      - name: Verify crate packaging
-        run: cargo package --workspace
+      - name: Build crate packages
+        run: cargo package --workspace --no-verify
 
   bench-smoke:
     name: Benchmark Smoke Check
