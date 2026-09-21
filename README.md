@@ -2,12 +2,12 @@
 
 **Контрольована перебудова мультимедійних файлів**
 
-[![CI](https://github.com/WebDev-Den/phd-soft/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/WebDev-Den/phd-soft/actions/workflows/ci.yml)
+[![CI](https://github.com/WebDev-Den/MDO-CDR/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/WebDev-Den/MDO-CDR/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 MDO-CDR перевіряє зображення, аудіо та відео, перебудовує їх відповідно до обраної політики й повторно читає результат перед наданням користувачеві. Програма створює новий медіафайл лише після успішного проходження перевірок; оригінал залишається незмінним.
 
-Доступні **вікно для Windows**, **консольна програма** та **Rust-бібліотека з C ABI**. Поточна версія — [0.1.0](https://github.com/WebDev-Den/phd-soft/blob/main/Cargo.toml).
+Доступні **вікно для Windows**, **консольна програма** та **Rust-бібліотека з C ABI**. Поточна версія — [0.1.0](Cargo.toml).
 
 [Швидкий старт](#швидкий-старт) · [Формати та профілі](#формати-та-профілі) · [Консольні команди](#консольні-команди) · [Для розробників](#для-розробників) · [CI та релізи](#ci-та-релізи)
 
@@ -24,7 +24,7 @@ MDO-CDR перевіряє зображення, аудіо та відео, п�
 
 ### Готовий пакет
 
-Використовуйте пакет для своєї платформи з [Releases](https://github.com/WebDev-Den/phd-soft/releases) або розділу **Artifacts** відповідного запуску [CI](https://github.com/WebDev-Den/phd-soft/actions/workflows/ci.yml). Якщо пакет потрібної версії ще не опубліковано, [складіть програму з коду](#складання-з-коду).
+Використовуйте пакет для своєї платформи з [Releases](https://github.com/WebDev-Den/MDO-CDR/releases) або розділу **Artifacts** відповідного запуску [CI](https://github.com/WebDev-Den/MDO-CDR/actions/workflows/ci.yml). Якщо пакет потрібної версії ще не опубліковано, [складіть програму з коду](#складання-з-коду).
 
 | Платформа | Пакет | Спосіб запуску |
 |---|---|---|
@@ -91,7 +91,7 @@ MDO-CDR перевіряє зображення, аудіо та відео, п�
 | `standard` | Структурний | 200 MiB | Допускає перебудову підтримуваних контейнерів зі збереженням стисненого медіапотоку. |
 | `paranoid` | Змістовий | 50 MiB | Суворіші обмеження розмірів, кількості кадрів, тривалості та бітрейту. |
 
-**Змістова перебудова** працює з декодованими пікселями, кадрами або аудіосигналом. **Структурна перебудова** змінює контейнер, зберігаючи стиснений медіапотік. Повторне читання результату та правило надання лише за `Clean` діють в усіх профілях. Повні налаштування наведено в [`src/policy.rs`](https://github.com/WebDev-Den/phd-soft/blob/main/src/policy.rs).
+**Змістова перебудова** працює з декодованими пікселями, кадрами або аудіосигналом. **Структурна перебудова** змінює контейнер, зберігаючи стиснений медіапотік. Повторне читання результату та правило надання лише за `Clean` діють в усіх профілях. Повні налаштування наведено в [`src/policy.rs`](src/policy.rs).
 
 ## Консольні команди
 
@@ -151,8 +151,8 @@ MDO-CDR перевіряє зображення, аудіо та відео, п�
 Потрібні Git, Rust і Cargo; для Windows — Rust MSVC та Visual Studio C++ Build Tools. CI використовує **Rust 1.98.1**. У `Cargo.toml` задекларовано мінімум 1.88, який окремо не перевіряється поточним CI. Залежності зафіксовано в `Cargo.lock`.
 
 ```bash
-git clone https://github.com/WebDev-Den/phd-soft.git
-cd phd-soft
+git clone https://github.com/WebDev-Den/MDO-CDR.git
+cd MDO-CDR
 ```
 
 Папка `bin/` не зберігається в Git. Після клонування спочатку складіть програму.
@@ -201,7 +201,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
-Для бібліотечної інтеграції явно обирайте профіль: `DefensePolicy::default()` відповідає `standard`. Експорт C ABI та правила роботи з буферами містяться в [`src/ffi.rs`](https://github.com/WebDev-Den/phd-soft/blob/main/src/ffi.rs). Складання консольної програми разом із динамічною та статичною бібліотеками:
+Для бібліотечної інтеграції явно обирайте профіль: `DefensePolicy::default()` відповідає `standard`. Експорт C ABI та правила роботи з буферами містяться в [`src/ffi.rs`](src/ffi.rs). Складання консольної програми разом із динамічною та статичною бібліотеками:
 
 ```bash
 cargo build --release --locked --lib --bin mdocdr
@@ -240,21 +240,21 @@ pwsh -File ./scripts/test-dissertation.ps1
 
 | Шлях | Призначення |
 |---|---|
-| [`src/lib.rs`](https://github.com/WebDev-Den/phd-soft/blob/main/src/lib.rs) | Основний конвеєр і бібліотечний API. |
-| [`src/main.rs`](https://github.com/WebDev-Den/phd-soft/blob/main/src/main.rs) | Консольна програма та JSON-звіти. |
-| [`src/handlers/`](https://github.com/WebDev-Den/phd-soft/tree/main/src/handlers/) | Обробники зображень, аудіо, відео та контейнерів. |
-| [`src/validation.rs`](https://github.com/WebDev-Den/phd-soft/blob/main/src/validation.rs) | Повторне читання й перевірка виходу. |
-| [`src/policy.rs`](https://github.com/WebDev-Den/phd-soft/blob/main/src/policy.rs) | Профілі, обмеження та правила оброблення. |
-| [`src/process.rs`](https://github.com/WebDev-Den/phd-soft/blob/main/src/process.rs) | Запуск зовнішніх компонентів із контролем часу. |
-| [`src/ffi.rs`](https://github.com/WebDev-Den/phd-soft/blob/main/src/ffi.rs) | C ABI та protobuf-метадані. |
-| [`crates/`](https://github.com/WebDev-Den/phd-soft/tree/main/crates/) | Допоміжні компоненти Rust workspace. |
-| [`tests/`](https://github.com/WebDev-Den/phd-soft/tree/main/tests/) | Інтеграційні перевірки й тестові сценарії. |
-| [`Start.ps1`](Start.ps1), [`Build.ps1`](https://github.com/WebDev-Den/phd-soft/blob/main/Build.ps1) | Windows-інтерфейс і локальне складання. |
-| [`.github/workflows/`](https://github.com/WebDev-Den/phd-soft/tree/main/.github/workflows/) | CI та публікація релізів. |
+| [`src/lib.rs`](src/lib.rs) | Основний конвеєр і бібліотечний API. |
+| [`src/main.rs`](src/main.rs) | Консольна програма та JSON-звіти. |
+| [`src/handlers/`](src/handlers/) | Обробники зображень, аудіо, відео та контейнерів. |
+| [`src/validation.rs`](src/validation.rs) | Повторне читання й перевірка виходу. |
+| [`src/policy.rs`](src/policy.rs) | Профілі, обмеження та правила оброблення. |
+| [`src/process.rs`](src/process.rs) | Запуск зовнішніх компонентів із контролем часу. |
+| [`src/ffi.rs`](src/ffi.rs) | C ABI та protobuf-метадані. |
+| [`crates/`](crates/) | Допоміжні компоненти Rust workspace. |
+| [`tests/`](tests/) | Інтеграційні перевірки й тестові сценарії. |
+| [`Start.ps1`](Start.ps1), [`Build.ps1`](Build.ps1) | Windows-інтерфейс і локальне складання. |
+| [`.github/workflows/`](.github/workflows/) | CI та публікація релізів. |
 
 ## CI та релізи
 
-[GitHub Actions](https://github.com/WebDev-Den/phd-soft/actions) автоматизує перевірки й підготовку пакетів.
+[GitHub Actions](https://github.com/WebDev-Den/MDO-CDR/actions) автоматизує перевірки й підготовку пакетів.
 
 | Подія | Дії |
 |---|---|
@@ -267,7 +267,7 @@ pwsh -File ./scripts/test-dissertation.ps1
 
 Пакети в **Artifacts** зберігаються **14 днів**. Кожен містить програму, бібліотеки, README, ліцензію та внутрішній `SHA256SUMS`; поруч з архівом створюється файл `.sha256`. Windows-пакет також містить `Start.cmd` і `Start.ps1`.
 
-Для версії `0.1.0` тег релізу має бути `v0.1.0`. Теги з дефісом позначають попередній реліз. Публікація відбувається лише після успішних перевірок; push у гілку створює CI-артефакти без GitHub Release. Налаштування: [`ci.yml`](https://github.com/WebDev-Den/phd-soft/blob/main/.github/workflows/ci.yml), [`release.yml`](https://github.com/WebDev-Den/phd-soft/blob/main/.github/workflows/release.yml).
+Для версії `0.1.0` тег релізу має бути `v0.1.0`. Теги з дефісом позначають попередній реліз. Публікація відбувається лише після успішних перевірок; push у гілку створює CI-артефакти без GitHub Release. Налаштування: [`ci.yml`](.github/workflows/ci.yml), [`release.yml`](.github/workflows/release.yml).
 
 Локальне пакування після складання CLI та бібліотек потребує PowerShell 7:
 
