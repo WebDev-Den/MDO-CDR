@@ -1,6 +1,6 @@
 #![no_main]
 
-use file_defender::handlers::audio_native::{try_sanitize_mp3, try_sanitize_wav, try_sanitize_flac};
+use mdo_cdr::handlers::audio_native::{try_sanitize_flac, try_sanitize_mp3, try_sanitize_wav};
 use libfuzzer_sys::fuzz_target;
 
 fuzz_target!(|data: &[u8]| {

@@ -1,7 +1,7 @@
 #![no_main]
 
-use file_defender::{DefenseContext, policy::AnimatedImagePolicy};
-use file_defender::handlers::animated_image::AnimatedImageHandler;
+use mdo_cdr::{DefenseContext, policy::AnimatedImagePolicy};
+use mdo_cdr::handlers::animated_image::AnimatedImageHandler;
 use libfuzzer_sys::fuzz_target;
 
 fuzz_target!(|data: &[u8]| {

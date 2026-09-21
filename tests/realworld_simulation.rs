@@ -12,7 +12,7 @@
 
 use std::io::Write;
 
-use file_defender::{
+use mdo_cdr::{
     DefenseContext, DefenseVerdict, FileDefender, FileKind, policy::DefensePolicy,
 };
 

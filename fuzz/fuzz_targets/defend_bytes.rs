@@ -1,6 +1,6 @@
 #![no_main]
 
-use file_defender::{DefenseContext, FileDefender, policy::DefensePolicy};
+use mdo_cdr::{DefenseContext, FileDefender, policy::DefensePolicy};
 use libfuzzer_sys::fuzz_target;
 
 fuzz_target!(|data: &[u8]| {

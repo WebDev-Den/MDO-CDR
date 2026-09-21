@@ -1,6 +1,6 @@
 #![allow(clippy::field_reassign_with_default)]
 
-use file_defender::{
+use mdo_cdr::{
     DefenseContext, DefenseVerdict, FileDefender, FileKind, SignatureRule,
     policy::{
         AudioKeepOriginalMode, AudioOutputCodec, DecoderFailureMode, DefensePolicy,
@@ -398,7 +398,7 @@ fn structured_probe_for_other_can_block_invalid_pdf() {
     let has_other_probe = result
         .stages
         .iter()
-        .any(|value| value.stage == file_defender::PipelineStage::OtherProbe);
+        .any(|value| value.stage == mdo_cdr::PipelineStage::OtherProbe);
     assert!(has_other_probe);
 }
 

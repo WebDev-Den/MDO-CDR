@@ -1,4 +1,4 @@
-use file_defender::{
+use mdo_cdr::{
     DefenseContext, DefenseVerdict, FileDefender, SignatureRule,
     policy::{DefensePolicy, OtherPolicy, ProbeFailureMode},
 };

@@ -14,7 +14,7 @@
 //!   6. Cancellation and timeout
 //!   7. Media-only policy enforcement
 
-use file_defender::{
+use mdo_cdr::{
     CancellationToken, DefenderError, DefenseContext, DefenseVerdict, FileDefender, FileKind,
     policy::DefensePolicy,
 };
@@ -577,7 +577,7 @@ fn cancellation_token_stops_processing() {
     // Cancel immediately before processing.
     token.cancel();
     let context = DefenseContext {
-        source: file_defender::types::SourceRole::Outgoing,
+        source: mdo_cdr::types::SourceRole::Outgoing,
         cancel: Some(token),
         ..DefenseContext::default()
     };

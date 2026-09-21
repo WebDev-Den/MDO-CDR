@@ -1,5 +1,5 @@
 use criterion::{Criterion, criterion_group, criterion_main};
-use file_defender::{DefenseContext, FileDefender, policy::DefensePolicy};
+use mdo_cdr::{DefenseContext, FileDefender, policy::DefensePolicy};
 
 fn benchmark_defend_bytes(c: &mut Criterion) {
     let defender = FileDefender::new(DefensePolicy::default());

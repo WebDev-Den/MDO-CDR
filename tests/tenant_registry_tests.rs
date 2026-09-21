@@ -1,12 +1,12 @@
-use file_defender::policy::DefensePolicy;
-use file_defender::tenant::{
+use mdo_cdr::policy::DefensePolicy;
+use mdo_cdr::tenant::{
     HmacKeyRing, HmacTenantMediaLimitsSnapshot, HmacTenantPolicySnapshot,
     SignedTenantMediaLimitsSnapshot, SignedTenantPolicySnapshot, TenantDefenderRegistry,
     TenantMediaLimitsOverride, TenantMediaLimitsSnapshot, TenantOverrideProvenance,
     TenantPolicyRemoveResult, TenantPolicySnapshot, TenantPolicyUpdateResult, TenantPolicyVersion,
     TenantSnapshotImportReport,
 };
-use file_defender::{DefenderError, DefenseContext};
+use mdo_cdr::{DefenderError, DefenseContext};
 
 #[test]
 fn tenant_registry_uses_tenant_snapshot_if_present() {
@@ -359,7 +359,7 @@ fn tenant_registry_clears_media_limit_override_without_dropping_base_policy() {
     let registry = TenantDefenderRegistry::new(DefensePolicy::default());
     let base = DefensePolicy {
         blocked_extensions: vec!["txt".to_string()],
-        video: file_defender::policy::VideoPolicy {
+        video: mdo_cdr::policy::VideoPolicy {
             max_duration_secs: 180,
             ..DefensePolicy::default().video
         },
