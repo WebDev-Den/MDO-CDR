@@ -1,0 +1,10 @@
+[package]
+name = "defender-signatures"
+version = "0.1.0"
+edition = "2024"
+description = "Signature scanning engine and related primitives for the mdo_cdr workspace"
+documentation = "https://docs.rs/defender-signatures"
+license = "MIT"
+
+[dependencies]
+aho-corasick = "1.1"

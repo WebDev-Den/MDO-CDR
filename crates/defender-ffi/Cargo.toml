@@ -1,0 +1,10 @@
+[package]
+name = "defender-ffi"
+version = "0.1.0"
+edition = "2024"
+description = "Versioned protobuf FFI models for the mdo_cdr workspace"
+documentation = "https://docs.rs/defender-ffi"
+license = "MIT"
+
+[dependencies]
+prost = { version = "0.14.1", features = ["derive"] }

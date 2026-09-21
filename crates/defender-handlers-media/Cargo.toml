@@ -1,0 +1,9 @@
+[package]
+name = "defender-handlers-media"
+version = "0.1.0"
+edition = "2024"
+description = "Media handler abstractions for the mdo_cdr workspace"
+documentation = "https://docs.rs/defender-handlers-media"
+license = "MIT"
+
+[dependencies]

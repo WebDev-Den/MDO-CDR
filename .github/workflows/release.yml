@@ -1,0 +1,65 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  create-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Create Release
+        id: create_release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Release ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+
+  build-and-upload:
+    name: Build & Upload Assets
+    needs: create-release
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            artifact_name: libmdo_cdr-linux-x86_64.tar.gz
+            asset_path: target/release/libmdo_cdr.so
+            asset_name: libmdo_cdr-linux-x86_64.so
+          - os: windows-latest
+            artifact_name: mdo_cdr-windows-x86_64.zip
+            asset_path: target/release/mdo_cdr.dll
+            asset_name: mdo_cdr-windows-x86_64.dll
+          - os: macos-latest
+            artifact_name: libmdo_cdr-macos-x86_64.tar.gz
+            asset_path: target/release/libmdo_cdr.dylib
+            asset_name: libmdo_cdr-macos-x86_64.dylib
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build release C-ABI library
+        run: cargo build --release --lib
+
+      - name: Upload Release Asset
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ matrix.asset_path }}

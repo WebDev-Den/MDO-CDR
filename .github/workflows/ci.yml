@@ -1,0 +1,97 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  check-and-test:
+    name: Check, Lint & Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install system dependencies (FFmpeg)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+
+      - name: Set up Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            .
+            crates/*
+
+      - name: Check code formatting
+        run: cargo fmt --all --check
+
+      - name: Compile workspace (all targets)
+        run: cargo build --workspace --all-targets
+
+      - name: Run unit & integration tests
+        run: cargo test --workspace --all-targets --verbose
+
+      - name: Run Clippy linter
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+      - name: Verify crate packaging
+        run: cargo package --workspace
+
+  bench-smoke:
+    name: Benchmark Smoke Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Run Criterion smoke benchmarks
+        run: cargo bench --bench pipeline_bench -- --sample-size 10
+
+  build-artifacts:
+    name: Build Release Libraries
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build release binaries & C-ABI libraries
+        run: cargo build --release --lib
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mdo_cdr-library-${{ matrix.os }}
+          path: |
+            target/release/*.dll
+            target/release/*.so
+            target/release/*.dylib
+            target/release/*.a
+            target/release/*.lib
+          if-no-files-found: ignore

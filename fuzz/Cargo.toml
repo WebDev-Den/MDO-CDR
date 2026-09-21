@@ -1,0 +1,49 @@
+[package]
+name = "file-defender-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2024"
+license = "MIT"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4.10"
+file_defender = { path = ".." }
+
+[[bin]]
+name = "defend_bytes"
+path = "fuzz_targets/defend_bytes.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_mp4"
+path = "fuzz_targets/fuzz_mp4.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_ogg"
+path = "fuzz_targets/fuzz_ogg.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_webm"
+path = "fuzz_targets/fuzz_webm.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_apng"
+path = "fuzz_targets/fuzz_apng.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_audio_native"
+path = "fuzz_targets/fuzz_audio_native.rs"
+test = false
+doc = false

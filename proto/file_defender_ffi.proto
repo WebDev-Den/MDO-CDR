@@ -1,0 +1,63 @@
+syntax = "proto3";
+
+package file_defender.ffi;
+
+enum Verdict {
+  VERDICT_CLEAN = 0;
+  VERDICT_SUSPICIOUS = 1;
+  VERDICT_BLOCKED = 2;
+}
+
+enum FileKind {
+  FILE_KIND_IMAGE = 0;
+  FILE_KIND_GIF = 1;
+  FILE_KIND_VIDEO = 2;
+  FILE_KIND_AUDIO = 3;
+  FILE_KIND_OTHER = 4;
+}
+
+enum Stage {
+  STAGE_PRE_SCAN = 0;
+  STAGE_IMAGE_PROBE = 1;
+  STAGE_GIF_PROBE = 2;
+  STAGE_VIDEO_PROBE = 3;
+  STAGE_AUDIO_PROBE = 4;
+  STAGE_OTHER_PROBE = 5;
+  STAGE_DETECT = 6;
+  STAGE_REBUILD = 7;
+  STAGE_SIGNATURE_SCAN = 8;
+  STAGE_OUTPUT_VALIDATION = 9;
+}
+
+enum StageStatus {
+  STAGE_STATUS_SUCCESS = 0;
+  STAGE_STATUS_WARNING = 1;
+  STAGE_STATUS_BLOCKED = 2;
+}
+
+message Alert {
+  string code = 1;
+  string message = 2;
+  bool blocking = 3;
+}
+
+message PipelineStage {
+  Stage stage = 1;
+  StageStatus status = 2;
+  string detail = 3;
+}
+
+message Metadata {
+  Verdict verdict = 1;
+  FileKind file_kind = 2;
+  string mime = 3;
+  uint64 original_size = 4;
+  uint64 output_size = 5;
+  string sha256 = 6;
+  repeated Alert alerts = 7;
+  repeated PipelineStage stages = 8;
+}
+
+message Error {
+  string message = 1;
+}
