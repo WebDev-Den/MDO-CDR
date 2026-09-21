@@ -148,7 +148,7 @@ fn quarantine_on_decoder_failure_with_default_policy() {
 }
 
 #[test]
-fn strict_profile_blocks_unknown_kind() {
+fn strict_profile_rejects_unknown_kind_without_reconstruction_route() {
     let policy = DefensePolicy::strict_profile();
     let defender = FileDefender::new(policy);
 
@@ -158,9 +158,12 @@ fn strict_profile_blocks_unknown_kind() {
             Some("file.abcxyz".to_string()),
             DefenseContext::default(),
         )
-        .expect("strict profile still returns structured result");
+        .expect_err("unknown content has no semantic reconstruction route");
 
-    assert_eq!(result.verdict, DefenseVerdict::Blocked);
+    assert!(matches!(
+        result,
+        mdo_cdr::DefenderError::UnsupportedReconstructionLevel
+    ));
 }
 
 #[test]
@@ -456,23 +459,32 @@ fn output_mime_denylist_can_block_declared_mime() {
 }
 
 #[test]
-fn dry_run_mode_downgrades_blocks_to_warnings() {
+fn dry_run_records_would_block_and_withholds_candidate() {
     let mut policy = DefensePolicy::strict_profile().with_dry_run();
     policy.signature_rules.push(SignatureRule::anywhere(
         "block-me",
-        b"EICAR-STANDARD-ANTIVIRUS-TEST-FILE".to_vec(),
+        b"\x89PNG\r\n\x1a\n".to_vec(),
     ));
     let defender = FileDefender::new(policy);
+    let image = image::RgbImage::from_pixel(2, 2, image::Rgb([20, 40, 60]));
+    let mut input = Vec::new();
+    image
+        .write_to(
+            &mut std::io::Cursor::new(&mut input),
+            image::ImageFormat::Png,
+        )
+        .unwrap();
 
     let result = defender
         .defend_bytes(
-            b"EICAR-STANDARD-ANTIVIRUS-TEST-FILE".to_vec(),
-            Some("note.txt".to_string()),
+            input,
+            Some("image.png".to_string()),
             DefenseContext::default(),
         )
-        .expect("dry-run should not hard block");
+        .expect("dry-run reports the policy warning for otherwise valid media");
 
-    assert_ne!(result.verdict, DefenseVerdict::Blocked);
+    assert_eq!(result.verdict, DefenseVerdict::Suspicious);
+    assert!(result.artifact.output_bytes.is_empty());
     let has_dry_run_note = result
         .alerts
         .iter()

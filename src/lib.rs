@@ -3,9 +3,11 @@ pub mod error;
 pub mod ffi;
 pub mod handlers;
 pub mod policy;
+mod process;
 pub mod server;
 pub mod tenant;
 pub mod types;
+mod validation;
 
 pub use defender_core::policy_schema;
 
@@ -78,13 +80,30 @@ impl FileDefender {
         output_path: &Path,
         context: DefenseContext,
     ) -> Result<DefendResult, DefenderError> {
-        let input_bytes = std::fs::read(input_path)?;
+        use std::io::Read;
+        let input = std::fs::File::open(input_path)?;
+        let mut input_bytes = Vec::new();
+        input
+            .take(self.policy.max_input_size_bytes.saturating_add(1))
+            .read_to_end(&mut input_bytes)?;
         let name = input_path
             .file_name()
             .and_then(|value| value.to_str())
             .map(std::borrow::ToOwned::to_owned);
         let source = self.defend_bytes(input_bytes, name, context)?;
-        std::fs::write(output_path, &source.artifact.output_bytes)?;
+        if source.can_release() {
+            use std::io::Write;
+            let parent = output_path
+                .parent()
+                .filter(|path| !path.as_os_str().is_empty())
+                .unwrap_or_else(|| Path::new("."));
+            let mut staged = tempfile::NamedTempFile::new_in(parent)?;
+            staged.write_all(&source.artifact.output_bytes)?;
+            staged.as_file().sync_all()?;
+            staged
+                .persist_noclobber(output_path)
+                .map_err(|error| error.error)?;
+        }
         Ok(source)
     }
 
@@ -141,7 +160,7 @@ impl FileDefender {
                         Some(value) => value.clone(),
                         None => "application/octet-stream".to_string(),
                     };
-                    let output_size = input_bytes.len() as u64;
+                    let output_size = 0;
                     let digest = Self::sha256_hex(&input_bytes);
                     stages.push(PipelineStageReport {
                         stage: PipelineStage::OutputValidation,
@@ -167,7 +186,7 @@ impl FileDefender {
                             original_size,
                             output_size,
                             sha256: digest,
-                            output_bytes: input_bytes,
+                            output_bytes: Vec::new(),
                         },
                         diagnostics,
                     });
@@ -175,15 +194,21 @@ impl FileDefender {
             }
         }
         self.validate_kind_consistency(kind_from_name, kind_from_mime)?;
+        alerts.extend(self.validate_input_metadata(
+            file_name.as_deref(),
+            mime_guess.as_deref(),
+            context.declared_mime.as_deref(),
+        )?);
         let detection_status = self.detection_stage_status(kind_from_name, kind_from_mime);
         stages.push(PipelineStageReport {
             stage: PipelineStage::Detect,
             status: detection_status,
             detail: format!(
-                "kind_from_name={}, kind_from_mime={}, selected={}",
+                "kind_from_name={}, kind_from_mime={}, selected={}, declared_mime={}",
                 file_kind_label_optional(kind_from_name),
                 file_kind_label_optional(kind_from_mime),
-                file_kind_label(file_kind)
+                file_kind_label(file_kind),
+                context.declared_mime.as_deref().unwrap_or("unavailable")
             ),
         });
 
@@ -191,7 +216,12 @@ impl FileDefender {
         let mut rebuild_context = context.clone();
         rebuild_context.started_at = Some(std::time::Instant::now());
         rebuild_context.timeout_ms = self.policy.max_handler_duration_ms;
-        let artifact = self.rebuild_with_policy(file_kind, input_bytes, rebuild_context)?;
+        let artifact = self.rebuild_with_policy(file_kind, input_bytes, rebuild_context.clone())?;
+        let (level_stage, level_alert) = self.validate_reconstruction_level(file_kind, &artifact);
+        stages.push(level_stage);
+        if let Some(alert) = level_alert {
+            alerts.push(alert);
+        }
         for value in artifact.alerts {
             alerts.push(value);
         }
@@ -247,7 +277,10 @@ impl FileDefender {
         stages.push(PipelineStageReport {
             stage: PipelineStage::Rebuild,
             status: stage_status_from_alerts(&alerts),
-            detail: format!("rebuild_mime={}", artifact.mime),
+            detail: format!(
+                "rebuild_mime={} required_reconstruction={:?}",
+                artifact.mime, self.policy.minimum_reconstruction_level
+            ),
         });
 
         let signature_alerts = self.scan_signatures(&artifact.output_bytes);
@@ -276,9 +309,19 @@ impl FileDefender {
                 });
             }
         }
+        let (verification_stage, verification_alert) = validation::verify_output(
+            file_kind,
+            &artifact.output_bytes,
+            &self.policy,
+            &rebuild_context,
+        );
+        stages.push(verification_stage);
+        if let Some(alert) = verification_alert {
+            alerts.push(alert);
+        }
         stages.push(PipelineStageReport {
             stage: PipelineStage::OutputValidation,
-            status: PipelineStageStatus::Success,
+            status: stage_status_from_alerts(&alerts),
             detail: format!(
                 "output_size={} max_output_size={} max_expansion_ratio={}",
                 output_size,
@@ -377,7 +420,11 @@ impl FileDefender {
                 original_size,
                 output_size,
                 sha256: digest,
-                output_bytes: artifact.output_bytes,
+                output_bytes: if verdict == DefenseVerdict::Clean {
+                    artifact.output_bytes
+                } else {
+                    Vec::new()
+                },
             },
             diagnostics,
         })
@@ -408,6 +455,62 @@ impl FileDefender {
         }
     }
 
+    fn validate_reconstruction_level(
+        &self,
+        file_kind: FileKind,
+        artifact: &handlers::HandlerResult,
+    ) -> (PipelineStageReport, Option<DefenseAlert>) {
+        use policy::ReconstructionLevel::{Semantic, Structural};
+        let achieved = match file_kind {
+            FileKind::Image | FileKind::Gif
+                if FileKind::from_mime(Some(&artifact.mime)) == Some(file_kind) =>
+            {
+                Some(Semantic)
+            }
+            FileKind::AnimatedImage
+                if FileKind::from_mime(Some(&artifact.mime)) == Some(FileKind::Image) =>
+            {
+                Some(Structural)
+            }
+            FileKind::Audio | FileKind::Video => artifact.stages.iter().find_map(|stage| {
+                if stage.stage != PipelineStage::Rebuild {
+                    return None;
+                }
+                match stage.detail.as_str() {
+                    "achieved_reconstruction=semantic" => Some(Semantic),
+                    "achieved_reconstruction=structural" => Some(Structural),
+                    _ => None,
+                }
+            }),
+            _ => None,
+        };
+        let required = self.policy.minimum_reconstruction_level;
+        let passed = matches!(
+            (required, achieved),
+            (Structural, Some(Structural | Semantic)) | (Semantic, Some(Semantic))
+        );
+        let detail =
+            format!("required_reconstruction={required:?} achieved_reconstruction={achieved:?}");
+        let alert = (!passed).then(|| {
+            DefenseAlert::blocking(
+                "reconstruction_level_not_met",
+                "The candidate has not achieved the reconstruction level required by policy.",
+            )
+        });
+        (
+            PipelineStageReport {
+                stage: PipelineStage::Rebuild,
+                status: if passed {
+                    PipelineStageStatus::Success
+                } else {
+                    PipelineStageStatus::Blocked
+                },
+                detail,
+            },
+            alert,
+        )
+    }
+
     fn rebuild(
         &self,
         file_kind: FileKind,
@@ -427,8 +530,15 @@ impl FileDefender {
         let image_policy = self.policy.image.clone();
         let animated_image_policy = self.policy.animated_image.clone();
         let gif_policy = self.policy.gif.clone();
-        let video_policy = self.policy.video.clone();
-        let audio_policy = self.policy.audio.clone();
+        let mut video_policy = self.policy.video.clone();
+        let mut audio_policy = self.policy.audio.clone();
+        if self.policy.minimum_reconstruction_level == policy::ReconstructionLevel::Semantic {
+            if matches!(file_kind, FileKind::AnimatedImage | FileKind::Other) {
+                return Err(DefenderError::UnsupportedReconstructionLevel);
+            }
+            video_policy.mode = policy::VideoMode::RequireFfmpeg;
+            audio_policy.mode = policy::AudioMode::RequireFfmpeg;
+        }
         let other_policy = self.policy.other.clone();
         let kind_label = file_kind_label(file_kind).to_string();
 
@@ -532,7 +642,7 @@ impl FileDefender {
         let Some(kind_from_mime) = kind_from_mime else {
             return Ok(());
         };
-        if kind_from_name == kind_from_mime {
+        if compatible_kinds(kind_from_name, kind_from_mime) {
             return Ok(());
         }
         if self.policy.block_kind_mismatch {
@@ -548,7 +658,7 @@ impl FileDefender {
     ) -> PipelineStageStatus {
         match (kind_from_name, kind_from_mime) {
             (Some(left), Some(right)) => {
-                if left == right {
+                if compatible_kinds(left, right) {
                     return PipelineStageStatus::Success;
                 }
                 if self.policy.block_kind_mismatch {
@@ -574,6 +684,45 @@ impl FileDefender {
     fn guess_mime(&self, input: &[u8]) -> Option<String> {
         let kind = infer::get(input)?;
         Some(kind.mime_type().to_string())
+    }
+
+    fn validate_input_metadata(
+        &self,
+        file_name: Option<&str>,
+        sniffed_mime: Option<&str>,
+        declared_mime: Option<&str>,
+    ) -> Result<Vec<DefenseAlert>, DefenderError> {
+        let extension_mime = file_name.and_then(mime_from_filename);
+        let mut alerts = Vec::new();
+        let mut mismatch = false;
+        if let (Some(expected), Some(actual)) = (extension_mime, sniffed_mime) {
+            mismatch |= !compatible_mimes(expected, actual);
+        }
+        if let Some(declared) = declared_mime {
+            let declared = normalized_mime(declared);
+            if let Some(actual) = sniffed_mime {
+                mismatch |= !compatible_mimes(&declared, actual);
+            } else {
+                alerts.push(DefenseAlert::warning(
+                    "declared_mime_unverified",
+                    "The declared MIME cannot be confirmed from the input bytes.",
+                ));
+            }
+            if let Some(expected) = extension_mime {
+                mismatch |= !compatible_mimes(&declared, expected);
+            }
+            mismatch |= !declared.contains('/') || declared.contains('*');
+        }
+        if mismatch {
+            if self.policy.block_kind_mismatch {
+                return Err(DefenderError::FileTypeMismatch);
+            }
+            alerts.push(DefenseAlert::warning(
+                "input_mime_mismatch",
+                "Filename, declared MIME, and detected byte format do not agree.",
+            ));
+        }
+        Ok(alerts)
     }
 
     fn structured_probe_other(
@@ -735,7 +884,7 @@ impl FileDefender {
 
         let declared_kind = FileKind::from_mime(Some(&declared_mime));
         if let Some(declared_kind) = declared_kind
-            && declared_kind != expected_kind
+            && !compatible_kinds(declared_kind, expected_kind)
         {
             alerts.push(DefenseAlert::blocking(
                 "declared_mime_kind_mismatch",
@@ -749,7 +898,7 @@ impl FileDefender {
         let sniffed_mime = self.guess_mime(output_bytes);
         let sniffed_kind = FileKind::from_mime(sniffed_mime.as_deref());
         if let Some(sniffed_kind) = sniffed_kind {
-            if sniffed_kind != expected_kind {
+            if !compatible_kinds(sniffed_kind, expected_kind) {
                 alerts.push(DefenseAlert::blocking(
                     "sniffed_output_kind_mismatch",
                     format!(
@@ -770,6 +919,15 @@ impl FileDefender {
                     "Output mime could not be detected from bytes.",
                 ));
             }
+        }
+
+        if let Some(sniffed) = sniffed_mime
+            && !compatible_mimes(&declared_mime, &sniffed)
+        {
+            alerts.push(DefenseAlert::blocking(
+                "output_mime_mismatch",
+                "Declared output MIME does not match the actual byte format.",
+            ));
         }
 
         alerts
@@ -981,4 +1139,71 @@ fn file_kind_label_optional(kind: Option<FileKind>) -> &'static str {
         Some(value) => file_kind_label(value),
         None => "unknown",
     }
+}
+
+fn compatible_kinds(left: FileKind, right: FileKind) -> bool {
+    left == right
+        || matches!(
+            (left, right),
+            (FileKind::Image, FileKind::AnimatedImage) | (FileKind::AnimatedImage, FileKind::Image)
+        )
+}
+
+fn normalized_mime(mime: &str) -> String {
+    let mime = mime
+        .split(';')
+        .next()
+        .unwrap_or("")
+        .trim()
+        .to_ascii_lowercase();
+    match mime.as_str() {
+        "image/jpg" | "image/pjpeg" => "image/jpeg",
+        "image/x-png" | "image/apng" => "image/png",
+        "image/x-ms-bmp" => "image/bmp",
+        "audio/x-wav" | "audio/wave" | "audio/vnd.wave" => "audio/wav",
+        "audio/x-flac" => "audio/flac",
+        "audio/m4a" | "audio/x-m4a" | "audio/mp4" | "video/mp4" | "video/x-m4v" => {
+            "application/mp4"
+        }
+        "audio/x-aiff" => "audio/aiff",
+        "application/ogg" | "audio/opus" => "audio/ogg",
+        "video/x-matroska" => "video/matroska",
+        _ => return mime,
+    }
+    .to_string()
+}
+
+fn compatible_mimes(left: &str, right: &str) -> bool {
+    normalized_mime(left) == normalized_mime(right)
+}
+
+fn mime_from_filename(name: &str) -> Option<&'static str> {
+    let extension = Path::new(name).extension()?.to_str()?.to_ascii_lowercase();
+    Some(match extension.as_str() {
+        "png" | "apng" => "image/png",
+        "jpg" | "jpeg" => "image/jpeg",
+        "bmp" => "image/bmp",
+        "tif" | "tiff" => "image/tiff",
+        "webp" => "image/webp",
+        "gif" => "image/gif",
+        "mp4" | "m4a" => "application/mp4",
+        "mov" => "video/quicktime",
+        "avi" => "video/x-msvideo",
+        "mkv" => "video/matroska",
+        "webm" => "video/webm",
+        "mp3" => "audio/mpeg",
+        "wav" => "audio/wav",
+        "flac" => "audio/flac",
+        "aac" => "audio/aac",
+        "ogg" | "oga" | "opus" => "audio/ogg",
+        "amr" => "audio/amr",
+        "aif" | "aiff" => "audio/aiff",
+        "pdf" => "application/pdf",
+        "zip" => "application/zip",
+        "7z" => "application/x-7z-compressed",
+        "txt" | "csv" => "text/plain",
+        "json" => "application/json",
+        "xml" => "application/xml",
+        _ => return None,
+    })
 }

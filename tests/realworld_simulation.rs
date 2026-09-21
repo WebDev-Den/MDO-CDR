@@ -1,14 +1,10 @@
-//! Real-world file simulation tests.
+//! Generated media and synthetic container simulation tests.
 //!
-//! These tests generate spec-valid files that mimic what real devices
-//! produce (iPhone photos, Android voice notes, Chrome WebM, etc.),
-//! pass them through the CDR pipeline, and verify:
-//!   1. Output is non-empty and playable (correct magic bytes)
-//!   2. Metadata is stripped
-//!   3. Media content is preserved (or safely rebuilt)
-//!   4. Verdict is Clean (no false positives)
-//!
-//! The fixture generation is inlined — no external files needed.
+//! Valid generated PNG/JPEG/GIF/WAV inputs exercise release and preservation.
+//! Deliberately incomplete MP3/FLAC/Opus/MP4/WebM/APNG containers exercise
+//! native metadata filtering separately from the pipeline release decision.
+//! Header signatures alone do not demonstrate playable or valid media.
+//! All fixtures are generated in the test; these are not external research data.
 
 use std::io::Write;
 
@@ -36,6 +32,32 @@ fn realworld_jpeg_rebuild_strips_exif() {
     )
     .unwrap();
 
+    // Add a real EXIF APP1 segment: little-endian TIFF with one ASCII
+    // ImageDescription entry. The marker is harmless generated metadata.
+    let description = b"generated-dissertation-metadata\0";
+    let mut exif = b"Exif\0\0II\x2a\x00\x08\x00\x00\x00".to_vec();
+    exif.extend_from_slice(&1u16.to_le_bytes()); // IFD entry count
+    exif.extend_from_slice(&0x010eu16.to_le_bytes()); // ImageDescription
+    exif.extend_from_slice(&2u16.to_le_bytes()); // ASCII
+    exif.extend_from_slice(&(description.len() as u32).to_le_bytes());
+    exif.extend_from_slice(&26u32.to_le_bytes()); // Value offset from TIFF header
+    exif.extend_from_slice(&0u32.to_le_bytes()); // No next IFD
+    exif.extend_from_slice(description);
+    let mut app1 = vec![0xff, 0xe1];
+    app1.extend_from_slice(&((exif.len() + 2) as u16).to_be_bytes());
+    app1.extend_from_slice(&exif);
+    assert_eq!(&jpeg_buf[..2], &[0xff, 0xd8]);
+    jpeg_buf.splice(2..2, app1);
+    assert!(jpeg_buf.windows(6).any(|bytes| bytes == b"Exif\0\0"));
+    assert!(
+        jpeg_buf
+            .windows(description.len())
+            .any(|bytes| bytes == description)
+    );
+    let original_pixels = image::load_from_memory(&jpeg_buf)
+        .expect("generated JPEG with EXIF must decode")
+        .to_rgba8();
+
     let result = d
         .defend_bytes(
             jpeg_buf,
@@ -49,6 +71,28 @@ fn realworld_jpeg_rebuild_strips_exif() {
     assert!(!result.artifact.output_bytes.is_empty());
     // Output should be valid PNG (default output format).
     assert_eq!(&result.artifact.output_bytes[1..4], b"PNG");
+    assert!(
+        !result
+            .artifact
+            .output_bytes
+            .windows(6)
+            .any(|bytes| bytes == b"Exif\0\0")
+    );
+    assert!(
+        !result
+            .artifact
+            .output_bytes
+            .windows(description.len())
+            .any(|bytes| bytes == description),
+        "the injected EXIF description must not survive reconstruction"
+    );
+    let rebuilt_pixels = image::load_from_memory(&result.artifact.output_bytes)
+        .expect("rebuilt PNG must decode")
+        .to_rgba8();
+    assert_eq!(
+        rebuilt_pixels, original_pixels,
+        "JPEG reconstruction to PNG must preserve the decoded pixel values"
+    );
     // Info alert about metadata stripping.
     assert!(
         result
@@ -83,6 +127,11 @@ fn realworld_png_rebuild_preserves_pixels() {
     let original = image::load_from_memory(&png_buf).unwrap();
     assert_eq!(rebuilt.width(), original.width());
     assert_eq!(rebuilt.height(), original.height());
+    assert_eq!(
+        rebuilt.to_rgba8(),
+        original.to_rgba8(),
+        "PNG reconstruction must preserve every decoded RGBA pixel"
+    );
 }
 
 #[test]
@@ -208,7 +257,7 @@ fn realworld_wav_strips_list_keeps_audio() {
 }
 
 #[test]
-fn realworld_ogg_opus_strips_tags_keeps_audio() {
+fn synthetic_ogg_metadata_stripped_but_fake_packets_withheld() {
     let d = defender();
     let mut input = Vec::new();
     // OpusHead
@@ -231,21 +280,27 @@ fn realworld_ogg_opus_strips_tags_keeps_audio() {
     // Audio
     input.extend_from_slice(&make_ogg_page(0x04, 1, 2, 960, b"opus-frame-data-here"));
 
+    // A container rewrite does not establish that the synthetic codec payload is decodable.
+    let native = mdo_cdr::handlers::ogg_native::try_sanitize_ogg(&input)
+        .unwrap()
+        .unwrap();
+
     let result = d
         .defend_bytes(
             input,
             Some("voice.ogg".to_string()),
             DefenseContext::default(),
         )
-        .expect("OGG should succeed");
+        .expect("pipeline reports rejected Ogg");
+    assert_failed_read_withheld(&result, native.output_bytes.len() as u64);
 
-    let out_str = String::from_utf8_lossy(&result.artifact.output_bytes);
+    let out_str = String::from_utf8_lossy(&native.output_bytes);
     assert!(!out_str.contains("Stolen Recording"));
     assert!(out_str.contains("opus-frame-data-here"));
 }
 
 #[test]
-fn realworld_mp4_audio_strips_metadata() {
+fn synthetic_mp4_audio_metadata_stripped_but_fake_stream_withheld() {
     let d = defender();
     let mut input = Vec::new();
     input.extend_from_slice(&make_mp4_atom(b"ftyp", b"M4A \x00\x00\x02\x00M4A mp42"));
@@ -260,15 +315,21 @@ fn realworld_mp4_audio_strips_metadata() {
     input.extend_from_slice(&moov);
     input.extend_from_slice(&make_mp4_atom(b"mdat", b"aac-encoded-audio-samples"));
 
+    // A container rewrite does not establish that the synthetic codec payload is decodable.
+    let native = mdo_cdr::handlers::mp4_native::try_sanitize_mp4(&input)
+        .unwrap()
+        .unwrap();
+
     let result = d
         .defend_bytes(
             input,
             Some("memo.m4a".to_string()),
             DefenseContext::default(),
         )
-        .expect("M4A should succeed");
+        .expect("pipeline reports rejected M4A");
+    assert_failed_read_withheld(&result, native.output_bytes.len() as u64);
 
-    let out_str = String::from_utf8_lossy(&result.artifact.output_bytes);
+    let out_str = String::from_utf8_lossy(&native.output_bytes);
     assert!(!out_str.contains("Stolen Note"));
     assert!(out_str.contains("aac-encoded-audio-samples"));
 }
@@ -278,7 +339,7 @@ fn realworld_mp4_audio_strips_metadata() {
 // ═══════════════════════════════════════════════════════════════════════
 
 #[test]
-fn realworld_mp4_video_strips_gps_keeps_frames() {
+fn synthetic_mp4_video_gps_stripped_but_fake_stream_withheld() {
     let d = defender();
     let mut input = Vec::new();
     input.extend_from_slice(&make_mp4_atom(b"ftyp", b"isom\x00\x00\x02\x00isomiso2"));
@@ -295,22 +356,24 @@ fn realworld_mp4_video_strips_gps_keeps_frames() {
     let video_data = b"h264-nal-units-keyframe-slice-data-bitstream";
     input.extend_from_slice(&make_mp4_atom(b"mdat", video_data));
 
+    // A container rewrite does not establish that the synthetic codec payload is decodable.
+    let native = mdo_cdr::handlers::mp4_native::try_sanitize_mp4(&input)
+        .unwrap()
+        .unwrap();
+
     let result = d
         .defend_bytes(
             input,
             Some("clip.mp4".to_string()),
             DefenseContext::default(),
         )
-        .expect("MP4 video should succeed");
+        .expect("pipeline reports rejected MP4");
+    assert_failed_read_withheld(&result, native.output_bytes.len() as u64);
 
-    let out_str = String::from_utf8_lossy(&result.artifact.output_bytes);
+    let out_str = String::from_utf8_lossy(&native.output_bytes);
     assert!(!out_str.contains("48.8566"), "GPS must be stripped");
     assert!(
-        !result
-            .artifact
-            .output_bytes
-            .windows(4)
-            .any(|w| w == b"free"),
+        !native.output_bytes.windows(4).any(|w| w == b"free"),
         "free atom must be stripped"
     );
     assert!(
@@ -320,7 +383,7 @@ fn realworld_mp4_video_strips_gps_keeps_frames() {
 }
 
 #[test]
-fn realworld_webm_strips_tags_keeps_clusters() {
+fn synthetic_webm_tags_stripped_but_fake_clusters_withheld() {
     let d = defender();
     let mut input = Vec::new();
     // EBML header
@@ -350,15 +413,21 @@ fn realworld_webm_strips_tags_keeps_clusters() {
     ));
     input.extend_from_slice(&make_ebml_element(&[0x18, 0x53, 0x80, 0x67], &seg));
 
+    // A container rewrite does not establish that the synthetic codec payload is decodable.
+    let native = mdo_cdr::handlers::webm_native::try_sanitize_webm(&input)
+        .unwrap()
+        .unwrap();
+
     let result = d
         .defend_bytes(
             input,
             Some("screen.webm".to_string()),
             DefenseContext::default(),
         )
-        .expect("WebM should succeed");
+        .expect("pipeline reports rejected WebM");
+    assert_failed_read_withheld(&result, native.output_bytes.len() as u64);
 
-    let out_str = String::from_utf8_lossy(&result.artifact.output_bytes);
+    let out_str = String::from_utf8_lossy(&native.output_bytes);
     assert!(!out_str.contains("Evil Video"), "Tags must be stripped");
     assert!(
         out_str.contains("vp9-encoded-frames"),
@@ -372,7 +441,7 @@ fn realworld_webm_strips_tags_keeps_clusters() {
 // ═══════════════════════════════════════════════════════════════════════
 
 #[test]
-fn realworld_apng_strips_text_keeps_animation() {
+fn synthetic_apng_metadata_stripped_but_missing_frame_control_withheld() {
     let d = defender();
     let mut input = Vec::new();
     input.extend_from_slice(&[0x89, b'P', b'N', b'G', 0x0D, 0x0A, 0x1A, 0x0A]);
@@ -397,6 +466,13 @@ fn realworld_apng_strips_text_keeps_animation() {
     write_png_chunk(&mut input, b"IDAT", &compressed);
     write_png_chunk(&mut input, b"IEND", &[]);
 
+    // A container rewrite does not establish that the synthetic codec payload is decodable.
+    let native = mdo_cdr::handlers::animated_image::AnimatedImageHandler::new(
+        mdo_cdr::policy::AnimatedImagePolicy::default(),
+    )
+    .rebuild(input.clone(), DefenseContext::default())
+    .unwrap();
+
     let result = d
         // Use .png extension — classify() peeks bytes for acTL chunk and
         // upgrades to AnimatedImage automatically. Using .apng would cause
@@ -406,10 +482,11 @@ fn realworld_apng_strips_text_keeps_animation() {
             Some("sticker.png".to_string()),
             DefenseContext::default(),
         )
-        .expect("APNG should succeed");
+        .expect("pipeline reports rejected APNG");
+    assert_failed_read_withheld(&result, native.output_bytes.len() as u64);
 
     assert_eq!(result.artifact.file_kind, FileKind::AnimatedImage);
-    let out = &result.artifact.output_bytes;
+    let out = &native.output_bytes;
     // Must not contain stripped metadata.
     assert!(!out.windows(8).any(|w| w == b"Attacker"));
     assert!(!out.windows(4).any(|w| w == b"eXIf"));
@@ -560,4 +637,24 @@ fn make_ebml_element(id: &[u8], data: &[u8]) -> Vec<u8> {
     }
     e.extend_from_slice(data);
     e
+}
+
+fn assert_failed_read_withheld(result: &mdo_cdr::DefendResult, candidate_size: u64) {
+    assert_eq!(result.verdict, DefenseVerdict::Blocked);
+    assert!(
+        result.artifact.output_bytes.is_empty(),
+        "an unverified candidate cannot be released"
+    );
+    assert_eq!(
+        result.artifact.output_size, candidate_size,
+        "the examined candidate size remains available for audit"
+    );
+    assert!(
+        result
+            .alerts
+            .iter()
+            .any(|alert| alert.code == "output_read_failed"),
+        "the separate output reader must reject the synthetic payload: {:?}",
+        result.alerts
+    );
 }

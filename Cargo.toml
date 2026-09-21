@@ -1,4 +1,5 @@
 [workspace]
+exclude = ["fuzz"]
 members = [
     ".",
     "crates/defender-core",
@@ -12,6 +13,7 @@ members = [
 name = "mdo_cdr"
 version = "0.1.0"
 edition = "2024"
+rust-version = "1.88"
 description = "Rust library for controlled structural reconstruction of multimedia digital objects (CDR pipeline) for end-device protection"
 documentation = "https://docs.rs/mdo_cdr"
 readme = "README.md"
@@ -19,6 +21,10 @@ license = "MIT"
 
 [lib]
 crate-type = ["lib", "cdylib", "staticlib"]
+
+[[bin]]
+name = "mdocdr"
+path = "src/main.rs"
 
 [dependencies]
 aho-corasick = "1.1"

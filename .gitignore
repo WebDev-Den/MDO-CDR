@@ -1,1 +1,5 @@
 /target
+/bin
+/results
+/runtime-paths.json
+/dist-packages

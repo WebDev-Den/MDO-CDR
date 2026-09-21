@@ -18,8 +18,10 @@ pub enum DefenderError {
     OutputTooLarge { limit: u64, actual: u64 },
     #[error("Output expansion ratio too high. Limit: {limit:.3}, actual: {actual:.3}")]
     OutputExpansionTooHigh { limit: f64, actual: f64 },
-    #[error("File type mismatch between extension and content")]
+    #[error("File type mismatch between extension, declared MIME, and content")]
     FileTypeMismatch,
+    #[error("This format has no semantic reconstruction implementation")]
+    UnsupportedReconstructionLevel,
     #[error("Handler panicked while rebuilding {kind}: {message}")]
     HandlerPanic { kind: String, message: String },
     #[error("Animated image rebuild rejected: {0}")]

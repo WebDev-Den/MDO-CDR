@@ -1,8 +1,16 @@
 use crate::types::SignatureRule;
 use serde::Serialize;
 
+/// Minimum transformation required before a result may be released.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize)]
+pub enum ReconstructionLevel {
+    Structural,
+    Semantic,
+}
+
 #[derive(Debug, Clone)]
 pub struct DefensePolicy {
+    pub minimum_reconstruction_level: ReconstructionLevel,
     pub max_handler_duration_ms: u64,
     pub max_input_size_bytes: u64,
     pub max_output_size_bytes: u64,
@@ -31,6 +39,7 @@ pub struct DefensePolicy {
 impl Default for DefensePolicy {
     fn default() -> Self {
         Self {
+            minimum_reconstruction_level: ReconstructionLevel::Structural,
             max_handler_duration_ms: 10_000, // 10 seconds
             max_input_size_bytes: 200 * 1024 * 1024,
             max_output_size_bytes: 250 * 1024 * 1024,
@@ -89,12 +98,19 @@ impl Default for DefensePolicy {
 }
 
 impl DefensePolicy {
+    /// Conservative profile for the dissertation demonstration: semantic
+    /// reconstruction, known formats, and blocking when evidence is missing.
+    pub fn dissertation_profile() -> Self {
+        Self::strict_profile()
+    }
+
     pub fn staging_profile() -> Self {
         Self::default()
     }
 
     pub fn strict_profile() -> Self {
         Self {
+            minimum_reconstruction_level: ReconstructionLevel::Semantic,
             max_handler_duration_ms: 8_000,
             max_input_size_bytes: 100 * 1024 * 1024,
             max_output_size_bytes: 120 * 1024 * 1024,
@@ -181,6 +197,7 @@ impl DefensePolicy {
 
     pub fn paranoid_profile() -> Self {
         Self {
+            minimum_reconstruction_level: ReconstructionLevel::Semantic,
             max_handler_duration_ms: 5_000,
             max_input_size_bytes: 50 * 1024 * 1024,
             max_output_size_bytes: 60 * 1024 * 1024,

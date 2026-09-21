@@ -234,6 +234,9 @@ impl Default for CancellationToken {
 pub struct DefenseContext {
     pub source: SourceRole,
     pub tenant_id: Option<String>,
+    /// MIME type supplied by the sender or transport. `None` means unavailable;
+    /// it is never inferred from the filename and presented as a declaration.
+    pub declared_mime: Option<String>,
     pub cancel: Option<CancellationToken>,
     /// When the handler started (set by FileDefender before dispatch).
     pub started_at: Option<std::time::Instant>,
@@ -246,6 +249,7 @@ impl Default for DefenseContext {
         Self {
             source: SourceRole::Outgoing,
             tenant_id: None,
+            declared_mime: None,
             cancel: None,
             started_at: None,
             timeout_ms: 0,
@@ -370,8 +374,11 @@ pub struct DefendedArtifact {
     pub file_kind: FileKind,
     pub mime: String,
     pub original_size: u64,
+    /// Size of the examined candidate, including when release is withheld.
     pub output_size: u64,
+    /// Digest of the examined candidate (the input for a pre-scan rejection).
     pub sha256: String,
+    /// Released bytes. Always empty unless the verdict is `Clean`.
     pub output_bytes: Vec<u8>,
 }
 
@@ -382,6 +389,13 @@ pub struct DefendResult {
     pub stages: Vec<PipelineStageReport>,
     pub artifact: DefendedArtifact,
     pub diagnostics: DefenseDiagnostics,
+}
+
+impl DefendResult {
+    /// Only a clean, nonempty verified artifact may cross a delivery boundary.
+    pub fn can_release(&self) -> bool {
+        self.verdict == DefenseVerdict::Clean && !self.artifact.output_bytes.is_empty()
+    }
 }
 
 /// Per-call measurements emitted alongside the verdict.

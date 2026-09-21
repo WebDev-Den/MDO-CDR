@@ -1,0 +1,379 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.28s
+     Running unittests src\lib.rs (target\debug\deps\defender_core-8db7873900af6d2a.exe)
+
+running 2 tests
+test policy_schema::tests::migrates_v1 ... ok
+test policy_schema::tests::validates_document ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\lib.rs (target\debug\deps\defender_ffi-5ced965951dcfaef.exe)
+
+running 1 test
+test tests::decodes_v0_payload_with_int_fields ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\lib.rs (target\debug\deps\defender_handlers_media-ac67ca6806af8952.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\lib.rs (target\debug\deps\defender_observability-e641e1e3ab504029.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\lib.rs (target\debug\deps\defender_signatures-cbd7650af85c346f.exe)
+
+running 9 tests
+test tests::baseline_catches_eicar ... ok
+test tests::baseline_catches_pe_but_only_at_start ... ok
+test tests::each_rule_reports_at_most_once ... ok
+test tests::empty_rules_returns_no_hits ... ok
+test tests::finds_matching_rule ... ok
+test tests::first_bytes_matches_within_window ... ok
+test tests::first_bytes_rejects_outside_window ... ok
+test tests::last_bytes_matches_tail ... ok
+test tests::last_bytes_rejects_head ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running unittests src\lib.rs (target\debug\deps\mdo_cdr-ee514f5009aadcac.exe)
+
+running 50 tests
+test ffi::tests::ffi_defensively_drops_nonclean_payloads ... ok
+test ffi::tests::ffi_roundtrip_success ... ok
+test ffi::tests::metadata_decodes_legacy_int_wire_format ... ok
+test handlers::animated_image::tests::crc_matches_known_reference_zero_byte_input ... ok
+test handlers::animated_image::tests::rebuild_blocks_frame_count_bomb ... ok
+test handlers::animated_image::tests::rebuild_detects_apng_via_actl ... ok
+test handlers::animated_image::tests::rebuild_detects_corrupted_crc ... ok
+test handlers::animated_image::tests::rebuild_enforces_max_side ... ok
+test handlers::animated_image::tests::rebuild_keeps_idat_and_iend ... ok
+test handlers::animated_image::tests::rebuild_rejects_bad_signature ... ok
+test handlers::animated_image::tests::rebuild_strips_text_chunks ... ok
+test handlers::audio::tests::canonicalizes_audio_mime_aliases ... ok
+test handlers::audio::tests::keep_original_falls_back_for_unknown ... ok
+test handlers::audio::tests::keep_original_uses_copy_for_mp3 ... ok
+test handlers::audio::tests::parses_audio_probe_metrics ... ok
+test handlers::audio::tests::recognizes_allowed_audio_mimes ... ok
+test handlers::audio::tests::recognizes_executable_magic ... ok
+test handlers::audio_native::tests::flac_rejects_missing_streaminfo ... ok
+test handlers::audio_native::tests::flac_rejects_non_flac ... ok
+test handlers::audio_native::tests::flac_strips_vorbis_comment ... ok
+test handlers::audio_native::tests::mp3_rejects_non_mp3 ... ok
+test handlers::audio_native::tests::mp3_strips_id3v1_tail ... ok
+test handlers::audio_native::tests::mp3_strips_id3v2_header ... ok
+test handlers::audio_native::tests::wav_rejects_non_riff ... ok
+test handlers::audio_native::tests::wav_strips_list_chunk ... ok
+test handlers::mp4_native::tests::handles_zero_size_final_atom ... ok
+test handlers::mp4_native::tests::preserves_mdat_bitperfect ... ok
+test handlers::mp4_native::tests::rejects_non_mp4 ... ok
+test handlers::mp4_native::tests::rejects_truncated_atom ... ok
+test handlers::mp4_native::tests::strips_meta_inside_nested_trak ... ok
+test handlers::mp4_native::tests::strips_top_level_free_and_udta ... ok
+test handlers::mp4_native::tests::strips_udta_inside_moov ... ok
+test handlers::ogg_native::tests::ogg_crc_known_value ... ok
+test handlers::ogg_native::tests::preserves_audio_data_pages ... ok
+test handlers::ogg_native::tests::rejects_non_ogg ... ok
+test handlers::ogg_native::tests::rejects_truncated_page ... ok
+test handlers::ogg_native::tests::strips_opus_tags_metadata ... ok
+test handlers::video::tests::parses_video_probe_metrics ... ok
+test handlers::video::tests::recognizes_executable_magic ... ok
+test handlers::video::tests::recognizes_mp4_ftyp_signature ... ok
+test handlers::video::tests::rejects_non_mp4_signature ... ok
+test handlers::webm_native::tests::handles_empty_segment ... ok
+test handlers::webm_native::tests::preserves_cluster_data ... ok
+test handlers::webm_native::tests::rejects_non_ebml ... ok
+test handlers::webm_native::tests::strips_tags_and_attachments ... ok
+test handlers::webm_native::tests::vint_length_correctness ... ok
+test validation::tests::audio_reader_checks_packets_after_the_first_successful_decode ... ok
+test validation::tests::cancellation_prevents_output_read_success ... ok
+test validation::tests::gif_reader_checks_the_second_frame_payload ... ok
+test validation::tests::output_read_cannot_be_disabled_with_signature_policy_flags ... ok
+
+test result: ok. 50 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running unittests src\main.rs (target\debug\deps\mdocdr-da9bbb1289de0d8a.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\attack_simulations.rs (target\debug\deps\attack_simulations-fba61442b5b98bf8.exe)
+
+running 39 tests
+test bomb_apng_excessive_chunks_rejected ... ok
+test bomb_gif_excessive_frames_rejected ... ok
+test bomb_oversized_image_dimensions_rejected ... ok
+test cancellation_token_stops_processing ... ok
+test classify_svg_as_other ... ok
+test malformed_flac_no_streaminfo_rejected ... ok
+test malformed_mp4_truncated_atom_rejected ... ok
+test malformed_ogg_bad_sync_rejected ... ok
+test malformed_wav_missing_data_chunk_rejected ... ok
+test malformed_webm_bad_vint_rejected ... ok
+test metadata_wav_list_info_stripped ... ok
+test paranoid_profile_blocks_zip_extension ... ok
+test policy_blocks_apk_extension ... ok
+test policy_blocks_bat_extension ... ok
+test policy_blocks_dex_extension ... ok
+test policy_blocks_docx ... ok
+test policy_blocks_exe_extension ... ok
+test policy_blocks_jar_extension ... ok
+test policy_blocks_pdf ... ok
+test policy_blocks_ps1_extension ... ok
+test policy_blocks_wasm_extension ... ok
+test policy_blocks_zip ... ok
+test signature_eicar_in_text_file_blocked ... ok
+test signature_pe_header_in_middle_of_data_detected ... ok
+test smuggle_dex_android_blocked ... ok
+test smuggle_double_extension_bat_mp3_blocked ... ok
+test smuggle_double_extension_exe_png_blocked ... ok
+test smuggle_elf_renamed_to_png_blocked ... ok
+test smuggle_exe_renamed_to_jpg_blocked ... ok
+test smuggle_java_class_as_bin_blocked ... ok
+test smuggle_ole_doc_blocked ... ok
+test smuggle_php_payload_blocked ... ok
+test smuggle_shell_script_as_txt_blocked ... ok
+test smuggle_wasm_module_blocked ... ok
+test strict_profile_blocks_unknown_extensions ... ok
+test synthetic_flac_metadata_stripped_but_fake_frames_withheld ... ok
+test synthetic_mp3_metadata_stripped_but_incomplete_frames_withheld ... ok
+test synthetic_mp4_metadata_stripped_but_fake_stream_withheld ... ok
+test synthetic_ogg_metadata_stripped_but_fake_packets_withheld ... ok
+
+test result: ok. 39 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.16s
+
+     Running tests\cli_contract.rs (target\debug\deps\cli_contract-7897427b2e740374.exe)
+
+running 3 tests
+test cli_rejects_duplicate_or_unknown_options ... ok
+test cli_releases_only_a_readable_result_and_never_overwrites_source ... ok
+test cli_wrong_declared_type_emits_report_without_media_file ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s
+
+     Running tests\defender_tests.rs (target\debug\deps\defender_tests-8d146c34214296a9.exe)
+
+running 29 tests
+test blocked_extension_list_covers_common_threats ... ok
+test blocks_by_extension_before_rebuild ... ok
+test blocks_double_extension_bat_jpg ... ok
+test blocks_double_extension_exe_png ... ok
+test blocks_file_by_signature ... ok
+test blocks_mismatch_between_extension_and_mime ... ok
+test classifies_mp3_as_audio_kind ... ok
+test classify_detects_apng_extension ... ok
+test classify_normal_png_stays_image ... ok
+test dry_run_records_would_block_and_withholds_candidate ... ok
+test empty_other_payload_is_blocked ... ok
+test gif_frame_limit_fails_fast_without_partial_output ... ok
+test handles_audio_path_with_mp3_extension ... ok
+test high_entropy_other_can_be_blocked_in_strict_other_mode ... ok
+test image_pixel_limit_fails_fast_before_rebuild ... ok
+test keep_original_unknown_audio_can_be_blocked_by_policy ... ok
+test marks_high_entropy_other_files_as_blocked ... ok
+test output_executable_magic_blocked_even_without_output_kind_enforcement ... ok
+test output_expansion_limit_is_enforced ... ok
+test output_mime_denylist_can_block_declared_mime ... ok
+test output_mime_whitelist_can_block_declared_mime ... ok
+test pre_scan_can_block_before_decode ... ok
+test profile_modes_are_set_as_expected ... ok
+test quarantine_on_decoder_failure_with_default_policy ... ok
+test strict_profile_rejects_unknown_kind_without_reconstruction_route ... ok
+test structured_probe_for_other_can_block_invalid_pdf ... ok
+test svg_classified_as_other_and_blocked ... ok
+test tenant_presets_map_to_expected_profiles ... ok
+test unknown_output_mime_can_be_blocked ... ok
+
+test result: ok. 29 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.10s
+
+     Running tests\dissertation_media.rs (target\debug\deps\dissertation_media-74f16ed858d52c70.exe)
+
+running 2 tests
+test audio_content_matches_dissertation_thresholds ... ignored, requires MDO_TEST_FFMPEG and MDO_TEST_FFPROBE; generated dissertation-threshold control
+test video_content_matches_dissertation_thresholds ... ignored, requires MDO_TEST_FFMPEG and MDO_TEST_FFPROBE; generated dissertation-threshold control
+
+test result: ok. 0 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\dissertation_requirements.rs (target\debug\deps\dissertation_requirements-66b687050831778e.exe)
+
+running 10 tests
+test q4_same_input_repeats_and_accepted_png_is_a_fixed_point ... MDO_EVIDENCE {"case_id":"Q4-png-repeat-and-fixed-point","expected":"three equal decisions/stages/format/level/hashes and byte-identical accepted PNG on a second pass","fixture_origin":"deterministically_generated_control","group":"S0","input_sha256":"78b3a70d9e0571b89ca817050b2e61d3bff511849ece71a0a60486b3d57a1b9d","metrics":{"accepted_output_second_pass_byte_equal":true,"consumed_bytes_measurement":"not exposed by public pipeline API","decision":{"alerts":[{"code":"image_metadata_stripped","reason":"Image rebuilt as image/png from decoded pixels (32×24). All EXIF, ICC, XMP, and comment metadata was discarded.","severity":"Info"}],"candidate_bytes":2081,"output_mime":"image/png","read_validation_succeeded":true,"released":true,"returned_bytes":2081,"stages":[{"detail":"pre_scan_alerts=0","stage":"PreScan","status":"Success"},{"detail":"kind_from_name=image, kind_from_mime=image, selected=image, declared_mime=image/png","stage":"Detect","status":"Success"},{"detail":"required_reconstruction=Semantic achieved_reconstruction=Some(Semantic)","stage":"Rebuild","status":"Success"},{"detail":"image probe succeeded width=32 height=24","stage":"ImageProbe","status":"Success"},{"detail":"rebuild_mime=image/png required_reconstruction=Semantic","stage":"Rebuild","status":"Success"},{"detail":"signature_alerts=1","stage":"SignatureScan","status":"Success"},{"detail":"independent_read: image decoded completely, 32x24","stage":"OutputValidation","status":"Success"},{"detail":"output_size=2081 max_output_size=125829120 max_expansion_ratio=8","stage":"OutputValidation","status":"Success"}],"verdict":"Clean"},"decoder_implementation_independence":false,"input_bytes":2081,"same_input_decision_and_stages_equal":true,"same_input_output_sha256":["78b3a70d9e0571b89ca817050b2e61d3bff511849ece71a0a60486b3d57a1b9d","78b3a70d9e0571b89ca817050b2e61d3bff511849ece71a0a60486b3d57a1b9d","78b3a70d9e0571b89ca817050b2e61d3bff511849ece71a0a60486b3d57a1b9d"],"same_input_runs":3,"second_pass_decision":{"alerts":[{"code":"image_metadata_stripped","reason":"Image rebuilt as image/png from decoded pixels (32×24). All EXIF, ICC, XMP, and comment metadata was discarded.","severity":"Info"}],"candidate_bytes":2081,"output_mime":"image/png","read_validation_succeeded":true,"released":true,"returned_bytes":2081,"stages":[{"detail":"pre_scan_alerts=0","stage":"PreScan","status":"Success"},{"detail":"kind_from_name=image, kind_from_mime=image, selected=image, declared_mime=image/png","stage":"Detect","status":"Success"},{"detail":"required_reconstruction=Semantic achieved_reconstruction=Some(Semantic)","stage":"Rebuild","status":"Success"},{"detail":"image probe succeeded width=32 height=24","stage":"ImageProbe","status":"Success"},{"detail":"rebuild_mime=image/png required_reconstruction=Semantic","stage":"Rebuild","status":"Success"},{"detail":"signature_alerts=1","stage":"SignatureScan","status":"Success"},{"detail":"independent_read: image decoded completely, 32x24","stage":"OutputValidation","status":"Success"},{"detail":"output_size=2081 max_output_size=125829120 max_expansion_ratio=8","stage":"OutputValidation","status":"Success"}],"verdict":"Clean"}},"output_sha256":"78b3a70d9e0571b89ca817050b2e61d3bff511849ece71a0a60486b3d57a1b9d","passed":true,"policy":"dissertation_profile (resource overrides reported in metrics)","questions":["Q4"]}
+ok
+test s0_gif_preserves_all_frames_pixels_and_timing_within_two_percent ... MDO_EVIDENCE {"case_id":"S0-gif-four-frames","expected":"release all four full-canvas GIF frames with equal RGBA pixels and total/per-frame duration error <= 2%","fixture_origin":"deterministically_generated_control","group":"S0","input_sha256":"842b4eeb95da15b8eafc68a1dd0ca1106e8eecb7e387ced690029f031dd3fe58","metrics":{"all_decoded_canvas_pixels_equal":true,"all_frame_delay_errors_within_limit":true,"decision":{"alerts":[{"code":"gif_metadata_stripped","reason":"GIF rebuilt from 4 decoded frame(s). All comment and application extension blocks were dropped during re-encode.","severity":"Info"}],"candidate_bytes":179,"output_mime":"image/gif","read_validation_succeeded":true,"released":true,"returned_bytes":179,"stages":[{"detail":"pre_scan_alerts=0","stage":"PreScan","status":"Success"},{"detail":"kind_from_name=gif, kind_from_mime=gif, selected=gif, declared_mime=image/gif","stage":"Detect","status":"Success"},{"detail":"required_reconstruction=Semantic achieved_reconstruction=Some(Semantic)","stage":"Rebuild","status":"Success"},{"detail":"gif probe succeeded","stage":"GifProbe","status":"Success"},{"detail":"rebuild_mime=image/gif required_reconstruction=Semantic","stage":"Rebuild","status":"Success"},{"detail":"signature_alerts=1","stage":"SignatureScan","status":"Success"},{"detail":"independent_read: all 4 animation frames decoded","stage":"OutputValidation","status":"Success"},{"detail":"output_size=179 max_output_size=125829120 max_expansion_ratio=8","stage":"OutputValidation","status":"Success"}],"verdict":"Clean"},"decoder_implementation_independence":false,"duration_relative_error_limit":0.02,"geometry_equal":true,"input_bytes":155,"input_delays_cs":[10,10,10,10],"input_duration_cs":40,"input_frames":4,"output_delays_cs":[10,10,10,10],"output_duration_cs":40,"output_frames":4,"psnr_db":"Infinity","symmetric_duration_relative_error":0.0},"output_sha256":"be4a67f957d08009a4c520883744cf4acfd412a342d372137f089246ff6d7abd","passed":true,"policy":"dissertation_profile (resource overrides reported in metrics)","questions":["Q1","Q4"]}
+ok
+test s0_supported_rasters_preserve_geometry_and_decoded_pixels ... MDO_EVIDENCE {"case_id":"S0-raster-png","expected":"release PNG with equal dimensions and exactly equal decoded input pixels","fixture_origin":"deterministically_generated_control","group":"S0","input_sha256":"78b3a70d9e0571b89ca817050b2e61d3bff511849ece71a0a60486b3d57a1b9d","metrics":{"consumed_bytes_measurement":"not exposed by public pipeline API","decision":{"alerts":[{"code":"image_metadata_stripped","reason":"Image rebuilt as image/png from decoded pixels (32×24). All EXIF, ICC, XMP, and comment metadata was discarded.","severity":"Info"}],"candidate_bytes":2081,"output_mime":"image/png","read_validation_succeeded":true,"released":true,"returned_bytes":2081,"stages":[{"detail":"pre_scan_alerts=0","stage":"PreScan","status":"Success"},{"detail":"kind_from_name=image, kind_from_mime=image, selected=image, declared_mime=image/png","stage":"Detect","status":"Success"},{"detail":"required_reconstruction=Semantic achieved_reconstruction=Some(Semantic)","stage":"Rebuild","status":"Success"},{"detail":"image probe succeeded width=32 height=24","stage":"ImageProbe","status":"Success"},{"detail":"rebuild_mime=image/png required_reconstruction=Semantic","stage":"Rebuild","status":"Success"},{"detail":"signature_alerts=1","stage":"SignatureScan","status":"Success"},{"detail":"independent_read: image decoded completely, 32x24","stage":"OutputValidation","status":"Success"},{"detail":"output_size=2081 max_output_size=125829120 max_expansion_ratio=8","stage":"OutputValidation","status":"Success"}],"verdict":"Clean"},"decoded_rgba_equal":true,"decoder_implementation_independence":false,"geometry_equal":true,"input_bytes":2081,"input_dimensions":[32,24],"output_decoded":true,"output_dimensions":[32,24],"psnr_db":"Infinity","psnr_threshold_db":40},"output_sha256":"78b3a70d9e0571b89ca817050b2e61d3bff511849ece71a0a60486b3d57a1b9d","passed":true,"policy":"dissertation_profile (resource overrides reported in metrics)","questions":["Q1","Q4"]}
+MDO_EVIDENCE {"case_id":"S0-raster-jpg","expected":"release PNG with equal dimensions and exactly equal decoded input pixels","fixture_origin":"deterministically_generated_control","group":"S0","input_sha256":"98951c052a66b906d6c9ff3fb5fc7bfc0a197fb0aa3809afaf310a3ee411a49a","metrics":{"consumed_bytes_measurement":"not exposed by public pipeline API","decision":{"alerts":[{"code":"image_metadata_stripped","reason":"Image rebuilt as image/png from decoded pixels (32×24). All EXIF, ICC, XMP, and comment metadata was discarded.","severity":"Info"}],"candidate_bytes":2396,"output_mime":"image/png","read_validation_succeeded":true,"released":true,"returned_bytes":2396,"stages":[{"detail":"pre_scan_alerts=0","stage":"PreScan","status":"Success"},{"detail":"kind_from_name=image, kind_from_mime=image, selected=image, declared_mime=image/jpeg","stage":"Detect","status":"Success"},{"detail":"required_reconstruction=Semantic achieved_reconstruction=Some(Semantic)","stage":"Rebuild","status":"Success"},{"detail":"image probe succeeded width=32 height=24","stage":"ImageProbe","status":"Success"},{"detail":"rebuild_mime=image/png required_reconstruction=Semantic","stage":"Rebuild","status":"Success"},{"detail":"signature_alerts=1","stage":"SignatureScan","status":"Success"},{"detail":"independent_read: image decoded completely, 32x24","stage":"OutputValidation","status":"Success"},{"detail":"output_size=2396 max_output_size=125829120 max_expansion_ratio=8","stage":"OutputValidation","status":"Success"}],"verdict":"Clean"},"decoded_rgba_equal":true,"decoder_implementation_independence":false,"geometry_equal":true,"input_bytes":1225,"input_dimensions":[32,24],"output_decoded":true,"output_dimensions":[32,24],"psnr_db":"Infinity","psnr_threshold_db":40},"output_sha256":"788635a3c281344b702d0f22c61afd9c403f7175b772c00b2dd7fd479fab5732","passed":true,"policy":"dissertation_profile (resource overrides reported in metrics)","questions":["Q1","Q4"]}
+MDO_EVIDENCE {"case_id":"S0-raster-bmp","expected":"release PNG with equal dimensions and exactly equal decoded input pixels","fixture_origin":"deterministically_generated_control","group":"S0","input_sha256":"81e7de9e9957652dd817cec452d66c754067262bc6011482a531698df8e69498","metrics":{"consumed_bytes_measurement":"not exposed by public pipeline API","decision":{"alerts":[{"code":"image_metadata_stripped","reason":"Image rebuilt as image/png from decoded pixels (32×24). All EXIF, ICC, XMP, and comment metadata was discarded.","severity":"Info"}],"candidate_bytes":2081,"output_mime":"image/png","read_validation_succeeded":true,"released":true,"returned_bytes":2081,"stages":[{"detail":"pre_scan_alerts=0","stage":"PreScan","status":"Success"},{"detail":"kind_from_name=image, kind_from_mime=image, selected=image, declared_mime=image/bmp","stage":"Detect","status":"Success"},{"detail":"required_reconstruction=Semantic achieved_reconstruction=Some(Semantic)","stage":"Rebuild","status":"Success"},{"detail":"image probe succeeded width=32 height=24","stage":"ImageProbe","status":"Success"},{"detail":"rebuild_mime=image/png required_reconstruction=Semantic","stage":"Rebuild","status":"Success"},{"detail":"signature_alerts=1","stage":"SignatureScan","status":"Success"},{"detail":"independent_read: image decoded completely, 32x24","stage":"OutputValidation","status":"Success"},{"detail":"output_size=2081 max_output_size=125829120 max_expansion_ratio=8","stage":"OutputValidation","status":"Success"}],"verdict":"Clean"},"decoded_rgba_equal":true,"decoder_implementation_independence":false,"geometry_equal":true,"input_bytes":2358,"input_dimensions":[32,24],"output_decoded":true,"output_dimensions":[32,24],"psnr_db":"Infinity","psnr_threshold_db":40},"output_sha256":"78b3a70d9e0571b89ca817050b2e61d3bff511849ece71a0a60486b3d57a1b9d","passed":true,"policy":"dissertation_profile (resource overrides reported in metrics)","questions":["Q1","Q4"]}
+MDO_EVIDENCE {"case_id":"S0-raster-tiff","expected":"release PNG with equal dimensions and exactly equal decoded input pixels","fixture_origin":"deterministically_generated_control","group":"S0","input_sha256":"f2ca86bc39e0c273bc53cda1e12e2ed56b18b03f9fb42c7fef6e213c931d7179","metrics":{"consumed_bytes_measurement":"not exposed by public pipeline API","decision":{"alerts":[{"code":"image_metadata_stripped","reason":"Image rebuilt as image/png from decoded pixels (32×24). All EXIF, ICC, XMP, and comment metadata was discarded.","severity":"Info"}],"candidate_bytes":2081,"output_mime":"image/png","read_validation_succeeded":true,"released":true,"returned_bytes":2081,"stages":[{"detail":"pre_scan_alerts=0","stage":"PreScan","status":"Success"},{"detail":"kind_from_name=image, kind_from_mime=image, selected=image, declared_mime=image/tiff","stage":"Detect","status":"Success"},{"detail":"required_reconstruction=Semantic achieved_reconstruction=Some(Semantic)","stage":"Rebuild","status":"Success"},{"detail":"image probe succeeded width=32 height=24","stage":"ImageProbe","status":"Success"},{"detail":"rebuild_mime=image/png required_reconstruction=Semantic","stage":"Rebuild","status":"Success"},{"detail":"signature_alerts=1","stage":"SignatureScan","status":"Success"},{"detail":"independent_read: image decoded completely, 32x24","stage":"OutputValidation","status":"Success"},{"detail":"output_size=2081 max_output_size=125829120 max_expansion_ratio=8","stage":"OutputValidation","status":"Success"}],"verdict":"Clean"},"decoded_rgba_equal":true,"decoder_implementation_independence":false,"geometry_equal":true,"input_bytes":2514,"input_dimensions":[32,24],"output_decoded":true,"output_dimensions":[32,24],"psnr_db":"Infinity","psnr_threshold_db":40},"output_sha256":"78b3a70d9e0571b89ca817050b2e61d3bff511849ece71a0a60486b3d57a1b9d","passed":true,"policy":"dissertation_profile (resource overrides reported in metrics)","questions":["Q1","Q4"]}
+MDO_EVIDENCE {"case_id":"S0-raster-webp","expected":"release PNG with equal dimensions and exactly equal decoded input pixels","fixture_origin":"deterministically_generated_control","group":"S0","input_sha256":"8483ee1452afcc2c59b75a4429780a811eafa80f9e929e78ff8d02a547b79f8e","metrics":{"consumed_bytes_measurement":"not exposed by public pipeline API","decision":{"alerts":[{"code":"image_metadata_stripped","reason":"Image rebuilt as image/png from decoded pixels (32×24). All EXIF, ICC, XMP, and comment metadata was discarded.","severity":"Info"}],"candidate_bytes":2396,"output_mime":"image/png","read_validation_succeeded":true,"released":true,"returned_bytes":2396,"stages":[{"detail":"pre_scan_alerts=0","stage":"PreScan","status":"Success"},{"detail":"kind_from_name=image, kind_from_mime=image, selected=image, declared_mime=image/webp","stage":"Detect","status":"Success"},{"detail":"required_reconstruction=Semantic achieved_reconstruction=Some(Semantic)","stage":"Rebuild","status":"Success"},{"detail":"image probe succeeded width=32 height=24","stage":"ImageProbe","status":"Success"},{"detail":"rebuild_mime=image/png required_reconstruction=Semantic","stage":"Rebuild","status":"Success"},{"detail":"signature_alerts=1","stage":"SignatureScan","status":"Success"},{"detail":"independent_read: image decoded completely, 32x24","stage":"OutputValidation","status":"Success"},{"detail":"output_size=2396 max_output_size=125829120 max_expansion_ratio=8","stage":"OutputValidation","status":"Success"}],"verdict":"Clean"},"decoded_rgba_equal":true,"decoder_implementation_independence":false,"geometry_equal":true,"input_bytes":2518,"input_dimensions":[32,24],"output_decoded":true,"output_dimensions":[32,24],"psnr_db":"Infinity","psnr_threshold_db":40},"output_sha256":"1a038318d143e9dfc20156d423b547cceee03d5e51d62da37eb1d0d09bb3279a","passed":true,"policy":"dissertation_profile (resource overrides reported in metrics)","questions":["Q1","Q4"]}
+ok
+test s1_png_text_metadata_is_removed_without_pixel_loss ... MDO_EVIDENCE {"case_id":"S1-png-text-metadata","expected":"release PNG with the valid tEXt marker removed and decoded pixels unchanged","fixture_origin":"deterministically_generated_control","group":"S1","input_sha256":"1104e06bf1f0b278b046a67dde0dc97ee2941f725b886b68a3e2b2627719fcb8","metrics":{"consumed_bytes_measurement":"not exposed by public pipeline API","decision":{"alerts":[{"code":"image_metadata_stripped","reason":"Image rebuilt as image/png from decoded pixels (32×24). All EXIF, ICC, XMP, and comment metadata was discarded.","severity":"Info"}],"candidate_bytes":2081,"output_mime":"image/png","read_validation_succeeded":true,"released":true,"returned_bytes":2081,"stages":[{"detail":"pre_scan_alerts=0","stage":"PreScan","status":"Success"},{"detail":"kind_from_name=image, kind_from_mime=image, selected=image, declared_mime=image/png","stage":"Detect","status":"Success"},{"detail":"required_reconstruction=Semantic achieved_reconstruction=Some(Semantic)","stage":"Rebuild","status":"Success"},{"detail":"image probe succeeded width=32 height=24","stage":"ImageProbe","status":"Success"},{"detail":"rebuild_mime=image/png required_reconstruction=Semantic","stage":"Rebuild","status":"Success"},{"detail":"signature_alerts=1","stage":"SignatureScan","status":"Success"},{"detail":"independent_read: image decoded completely, 32x24","stage":"OutputValidation","status":"Success"},{"detail":"output_size=2081 max_output_size=125829120 max_expansion_ratio=8","stage":"OutputValidation","status":"Success"}],"verdict":"Clean"},"decoded_rgba_equal":true,"decoder_implementation_independence":false,"geometry_equal":true,"input_bytes":2136,"input_contains_valid_text_chunk":true,"input_dimensions":[32,24],"inserted_chunk_bytes":55,"metadata_marker_absent_from_output":true,"output_decoded":true,"output_dimensions":[32,24],"psnr_db":"Infinity","psnr_threshold_db":40},"output_sha256":"78b3a70d9e0571b89ca817050b2e61d3bff511849ece71a0a60486b3d57a1b9d","passed":true,"policy":"dissertation_profile (resource overrides reported in metrics)","questions":["Q1"]}
+ok
+test s2_truncated_and_invalid_compressed_pngs_withhold_bytes ... MDO_EVIDENCE {"case_id":"S2-png-truncated","expected":"withhold all result bytes for a PNG with undecodable pixel data","fixture_origin":"deterministically_generated_control","group":"S2","input_sha256":"238cb2de62ea9db98fd4a64ac92c9d7e588491e493ec2c51c8f45d4dccba14d0","metrics":{"decision":{"reason":"Image rebuild failed: unexpected end of file","released":false,"returned_bytes":0,"verdict":"Error"},"expected_error_class":"Image","input_bytes":1040,"input_decode_failed":true},"output_sha256":null,"passed":true,"policy":"dissertation_profile (resource overrides reported in metrics)","questions":["Q2"]}
+MDO_EVIDENCE {"case_id":"S2-png-invalid-idat","expected":"withhold all result bytes for a PNG with undecodable pixel data","fixture_origin":"deterministically_generated_control","group":"S2","input_sha256":"8fb5ea9bbc19da800f4c3401ce05b3463fb4c85746da3c3885309c88fff1e064","metrics":{"decision":{"reason":"Image rebuild failed: Format error decoding Png: Corrupt deflate stream. BadZlibHeader","released":false,"returned_bytes":0,"verdict":"Error"},"expected_error_class":"Image","input_bytes":82,"input_decode_failed":true},"output_sha256":null,"passed":true,"policy":"dissertation_profile (resource overrides reported in metrics)","questions":["Q2"]}
+ok
+test s3_filename_mime_and_double_extension_conflicts_withhold_bytes ... MDO_EVIDENCE {"case_id":"S3-png-named-jpeg","expected":"withhold all result bytes when input type evidence conflicts","fixture_origin":"deterministically_generated_control","group":"S3","input_sha256":"78b3a70d9e0571b89ca817050b2e61d3bff511849ece71a0a60486b3d57a1b9d","metrics":{"actual_format":"PNG","decision":{"reason":"File type mismatch between extension, declared MIME, and content","released":false,"returned_bytes":0,"verdict":"Error"},"declared_mime":"image/png","expected_error_class":"FileTypeMismatch","filename":"pattern.jpg","input_bytes":2081},"output_sha256":null,"passed":true,"policy":"dissertation_profile (resource overrides reported in metrics)","questions":["Q2"]}
+MDO_EVIDENCE {"case_id":"S3-false-declared-mime","expected":"withhold all result bytes when input type evidence conflicts","fixture_origin":"deterministically_generated_control","group":"S3","input_sha256":"78b3a70d9e0571b89ca817050b2e61d3bff511849ece71a0a60486b3d57a1b9d","metrics":{"actual_format":"PNG","decision":{"reason":"File type mismatch between extension, declared MIME, and content","released":false,"returned_bytes":0,"verdict":"Error"},"declared_mime":"image/jpeg","expected_error_class":"FileTypeMismatch","filename":"pattern.png","input_bytes":2081},"output_sha256":null,"passed":true,"policy":"dissertation_profile (resource overrides reported in metrics)","questions":["Q2"]}
+MDO_EVIDENCE {"case_id":"S3-hidden-executable-extension","expected":"withhold all result bytes when input type evidence conflicts","fixture_origin":"deterministically_generated_control","group":"S3","input_sha256":"78b3a70d9e0571b89ca817050b2e61d3bff511849ece71a0a60486b3d57a1b9d","metrics":{"actual_format":"PNG","decision":{"reason":"This format has no semantic reconstruction implementation","released":false,"returned_bytes":0,"verdict":"Error"},"declared_mime":"image/png","expected_error_class":"UnsupportedReconstructionLevel (dangerous double extension routed to Other)","filename":"pattern.exe.png","input_bytes":2081},"output_sha256":null,"passed":true,"policy":"dissertation_profile (resource overrides reported in metrics)","questions":["Q2"]}
+ok
+test s4_appended_foreign_bytes_are_removed_or_withheld ... MDO_EVIDENCE {"case_id":"S4-png-appended-data","expected":"withhold, or release equal decoded pixels with both appended signatures removed","fixture_origin":"deterministically_generated_control","group":"S4","input_sha256":"d40ff129ea4981dbfd1aa1b35ced17ff9b590665d64c9e2ef14f073de41f54b0","metrics":{"appended_marker_and_zip_record_absent":true,"consumed_bytes_measurement":"not exposed by public pipeline API","decision":{"alerts":[{"code":"image_metadata_stripped","reason":"Image rebuilt as image/png from decoded pixels (32×24). All EXIF, ICC, XMP, and comment metadata was discarded.","severity":"Info"}],"candidate_bytes":2081,"output_mime":"image/png","read_validation_succeeded":true,"released":true,"returned_bytes":2081,"stages":[{"detail":"pre_scan_alerts=0","stage":"PreScan","status":"Success"},{"detail":"kind_from_name=image, kind_from_mime=image, selected=image, declared_mime=image/png","stage":"Detect","status":"Success"},{"detail":"required_reconstruction=Semantic achieved_reconstruction=Some(Semantic)","stage":"Rebuild","status":"Success"},{"detail":"image probe succeeded width=32 height=24","stage":"ImageProbe","status":"Success"},{"detail":"rebuild_mime=image/png required_reconstruction=Semantic","stage":"Rebuild","status":"Success"},{"detail":"signature_alerts=1","stage":"SignatureScan","status":"Success"},{"detail":"independent_read: image decoded completely, 32x24","stage":"OutputValidation","status":"Success"},{"detail":"output_size=2081 max_output_size=125829120 max_expansion_ratio=8","stage":"OutputValidation","status":"Success"}],"verdict":"Clean"},"decoded_rgba_equal":true,"decoder_implementation_independence":false,"geometry_equal":true,"input_bytes":2135,"input_dimensions":[32,24],"output_decoded":true,"output_dimensions":[32,24],"psnr_db":"Infinity","psnr_threshold_db":40,"scope":"controlled PNG plus benign appended data; not a general polyglot detector benchmark"},"output_sha256":"78b3a70d9e0571b89ca817050b2e61d3bff511849ece71a0a60486b3d57a1b9d","passed":true,"policy":"dissertation_profile (resource overrides reported in metrics)","questions":["Q2"]}
+ok
+test s5_resource_boundaries_are_inclusive_and_fail_closed_above_limit ... MDO_EVIDENCE {"case_id":"S5-pixels-15-limit-16","expected":"release at or below the pixel limit","fixture_origin":"deterministically_generated_control","group":"S5","input_sha256":"5705849c6ff819ebfb7639ef02229dceee8d51733e4e1c9eb3b8df0c1c0c96c3","metrics":{"actual_pixels":15,"decision":{"alerts":[{"code":"image_metadata_stripped","reason":"Image rebuilt as image/png from decoded pixels (15×1). All EXIF, ICC, XMP, and comment metadata was discarded.","severity":"Info"}],"candidate_bytes":114,"output_mime":"image/png","read_validation_succeeded":true,"released":true,"returned_bytes":114,"stages":[{"detail":"pre_scan_alerts=0","stage":"PreScan","status":"Success"},{"detail":"kind_from_name=image, kind_from_mime=image, selected=image, declared_mime=unavailable","stage":"Detect","status":"Success"},{"detail":"required_reconstruction=Semantic achieved_reconstruction=Some(Semantic)","stage":"Rebuild","status":"Success"},{"detail":"image probe succeeded width=15 height=1","stage":"ImageProbe","status":"Success"},{"detail":"rebuild_mime=image/png required_reconstruction=Semantic","stage":"Rebuild","status":"Success"},{"detail":"signature_alerts=1","stage":"SignatureScan","status":"Success"},{"detail":"independent_read: image decoded completely, 15x1","stage":"OutputValidation","status":"Success"},{"detail":"output_size=114 max_output_size=125829120 max_expansion_ratio=8","stage":"OutputValidation","status":"Success"}],"verdict":"Clean"},"input_bytes":114,"max_pixels":16},"output_sha256":"5705849c6ff819ebfb7639ef02229dceee8d51733e4e1c9eb3b8df0c1c0c96c3","passed":true,"policy":"dissertation_profile (resource overrides reported in metrics)","questions":["Q3"]}
+MDO_EVIDENCE {"case_id":"S5-pixels-16-limit-16","expected":"release at or below the pixel limit","fixture_origin":"deterministically_generated_control","group":"S5","input_sha256":"c91ad739e55b99964244858af133770923609a1a586dedcffad47f000823b54e","metrics":{"actual_pixels":16,"decision":{"alerts":[{"code":"image_metadata_stripped","reason":"Image rebuilt as image/png from decoded pixels (16×1). All EXIF, ICC, XMP, and comment metadata was discarded.","severity":"Info"}],"candidate_bytes":117,"output_mime":"image/png","read_validation_succeeded":true,"released":true,"returned_bytes":117,"stages":[{"detail":"pre_scan_alerts=0","stage":"PreScan","status":"Success"},{"detail":"kind_from_name=image, kind_from_mime=image, selected=image, declared_mime=unavailable","stage":"Detect","status":"Success"},{"detail":"required_reconstruction=Semantic achieved_reconstruction=Some(Semantic)","stage":"Rebuild","status":"Success"},{"detail":"image probe succeeded width=16 height=1","stage":"ImageProbe","status":"Success"},{"detail":"rebuild_mime=image/png required_reconstruction=Semantic","stage":"Rebuild","status":"Success"},{"detail":"signature_alerts=1","stage":"SignatureScan","status":"Success"},{"detail":"independent_read: image decoded completely, 16x1","stage":"OutputValidation","status":"Success"},{"detail":"output_size=117 max_output_size=125829120 max_expansion_ratio=8","stage":"OutputValidation","status":"Success"}],"verdict":"Clean"},"input_bytes":117,"max_pixels":16},"output_sha256":"c91ad739e55b99964244858af133770923609a1a586dedcffad47f000823b54e","passed":true,"policy":"dissertation_profile (resource overrides reported in metrics)","questions":["Q3"]}
+MDO_EVIDENCE {"case_id":"S5-pixels-17-limit-16","expected":"withhold above the pixel limit","fixture_origin":"deterministically_generated_control","group":"S5","input_sha256":"e5fea5c7ac1d8c2069c05324d3730749cc05b78daf7b19530c223bf7dcac81b8","metrics":{"actual_pixels":17,"decision":{"reason":"I/O failure: image pixel count exceeds max_pixels: 17 > 16","released":false,"returned_bytes":0,"verdict":"Error"},"input_bytes":120,"max_pixels":16},"output_sha256":null,"passed":true,"policy":"dissertation_profile (resource overrides reported in metrics)","questions":["Q3"]}
+MDO_EVIDENCE {"case_id":"S5-input-bytes-relative--1","expected":"release at or below the input byte limit","fixture_origin":"deterministically_generated_control","group":"S5","input_sha256":"78b3a70d9e0571b89ca817050b2e61d3bff511849ece71a0a60486b3d57a1b9d","metrics":{"decision":{"alerts":[{"code":"image_metadata_stripped","reason":"Image rebuilt as image/png from decoded pixels (32×24). All EXIF, ICC, XMP, and comment metadata was discarded.","severity":"Info"}],"candidate_bytes":2081,"output_mime":"image/png","read_validation_succeeded":true,"released":true,"returned_bytes":2081,"stages":[{"detail":"pre_scan_alerts=0","stage":"PreScan","status":"Success"},{"detail":"kind_from_name=image, kind_from_mime=image, selected=image, declared_mime=unavailable","stage":"Detect","status":"Success"},{"detail":"required_reconstruction=Semantic achieved_reconstruction=Some(Semantic)","stage":"Rebuild","status":"Success"},{"detail":"image probe succeeded width=32 height=24","stage":"ImageProbe","status":"Success"},{"detail":"rebuild_mime=image/png required_reconstruction=Semantic","stage":"Rebuild","status":"Success"},{"detail":"signature_alerts=1","stage":"SignatureScan","status":"Success"},{"detail":"independent_read: image decoded completely, 32x24","stage":"OutputValidation","status":"Success"},{"detail":"output_size=2081 max_output_size=125829120 max_expansion_ratio=8","stage":"OutputValidation","status":"Success"}],"verdict":"Clean"},"input_bytes":2081,"input_minus_limit":-1,"max_input_bytes":2082},"output_sha256":"78b3a70d9e0571b89ca817050b2e61d3bff511849ece71a0a60486b3d57a1b9d","passed":true,"policy":"dissertation_profile (resource overrides reported in metrics)","questions":["Q3"]}
+MDO_EVIDENCE {"case_id":"S5-input-bytes-relative-0","expected":"release at or below the input byte limit","fixture_origin":"deterministically_generated_control","group":"S5","input_sha256":"78b3a70d9e0571b89ca817050b2e61d3bff511849ece71a0a60486b3d57a1b9d","metrics":{"decision":{"alerts":[{"code":"image_metadata_stripped","reason":"Image rebuilt as image/png from decoded pixels (32×24). All EXIF, ICC, XMP, and comment metadata was discarded.","severity":"Info"}],"candidate_bytes":2081,"output_mime":"image/png","read_validation_succeeded":true,"released":true,"returned_bytes":2081,"stages":[{"detail":"pre_scan_alerts=0","stage":"PreScan","status":"Success"},{"detail":"kind_from_name=image, kind_from_mime=image, selected=image, declared_mime=unavailable","stage":"Detect","status":"Success"},{"detail":"required_reconstruction=Semantic achieved_reconstruction=Some(Semantic)","stage":"Rebuild","status":"Success"},{"detail":"image probe succeeded width=32 height=24","stage":"ImageProbe","status":"Success"},{"detail":"rebuild_mime=image/png required_reconstruction=Semantic","stage":"Rebuild","status":"Success"},{"detail":"signature_alerts=1","stage":"SignatureScan","status":"Success"},{"detail":"independent_read: image decoded completely, 32x24","stage":"OutputValidation","status":"Success"},{"detail":"output_size=2081 max_output_size=125829120 max_expansion_ratio=8","stage":"OutputValidation","status":"Success"}],"verdict":"Clean"},"input_bytes":2081,"input_minus_limit":0,"max_input_bytes":2081},"output_sha256":"78b3a70d9e0571b89ca817050b2e61d3bff511849ece71a0a60486b3d57a1b9d","passed":true,"policy":"dissertation_profile (resource overrides reported in metrics)","questions":["Q3"]}
+MDO_EVIDENCE {"case_id":"S5-input-bytes-relative-1","expected":"withhold above the input byte limit","fixture_origin":"deterministically_generated_control","group":"S5","input_sha256":"78b3a70d9e0571b89ca817050b2e61d3bff511849ece71a0a60486b3d57a1b9d","metrics":{"decision":{"reason":"File too large. Limit: 2080 bytes, actual: 2081 bytes","released":false,"returned_bytes":0,"verdict":"Error"},"input_bytes":2081,"input_minus_limit":1,"max_input_bytes":2080},"output_sha256":null,"passed":true,"policy":"dissertation_profile (resource overrides reported in metrics)","questions":["Q3"]}
+ok
+test s5_valid_compact_webp_exceeding_output_expansion_is_withheld ... MDO_EVIDENCE {"case_id":"S5-webp-output-expansion","expected":"withhold with OutputExpansionTooHigh when valid reconstructed PNG exceeds the unchanged profile ratio","fixture_origin":"deterministically_generated_control","group":"S5","input_sha256":"11f7325162f4be87c2cfe1724896eaa9c2a05f3d733c8e026840f41ca51422e7","metrics":{"decision":{"reason":"Output expansion ratio too high. Limit: 8.000, actual: 12.846","released":false,"returned_bytes":0,"verdict":"Error"},"expected_expansion_ratio":12.845679012345679,"fixture_classification_note":"valid pixels do not override the output expansion limit; resource case rather than an expected-release S0 case","input_bytes":162,"input_decoded":true,"max_output_expansion_ratio":8.0,"reconstructed_png_bytes":2081},"output_sha256":null,"passed":true,"policy":"dissertation_profile (resource overrides reported in metrics)","questions":["Q3"]}
+ok
+test s6_unsupported_text_archive_and_executable_canary_withhold_bytes ... MDO_EVIDENCE {"case_id":"S6-plain-text","expected":"withhold unsupported content or executable-header canary","fixture_origin":"deterministically_generated_control","group":"S6","input_sha256":"ad1806e39c1b2a970b10dfaaa3cd0441e295d67156d9df8d6b4ca52a7003cd04","metrics":{"decision":{"reason":"This format has no semantic reconstruction implementation","released":false,"returned_bytes":0,"verdict":"Error"},"expected_reason_matched":true,"filename":"note.txt","input_bytes":59},"output_sha256":null,"passed":true,"policy":"dissertation_profile (resource overrides reported in metrics)","questions":["Q2"]}
+MDO_EVIDENCE {"case_id":"S6-empty-zip","expected":"withhold unsupported content or executable-header canary","fixture_origin":"deterministically_generated_control","group":"S6","input_sha256":"8739c76e681f900923b900c9df0ef75cf421d39cabb54650c4b9ad19b6a76d85","metrics":{"decision":{"reason":"This format has no semantic reconstruction implementation","released":false,"returned_bytes":0,"verdict":"Error"},"expected_reason_matched":true,"filename":"empty.zip","input_bytes":22},"output_sha256":null,"passed":true,"policy":"dissertation_profile (resource overrides reported in metrics)","questions":["Q2"]}
+MDO_EVIDENCE {"case_id":"S6-executable-canary","expected":"withhold unsupported content or executable-header canary","fixture_origin":"deterministically_generated_control","group":"S6","input_sha256":"4e96c55283f7b18a70b1ac5ff644395ffb754eb82d3ef17bf4e660f91d67d182","metrics":{"decision":{"alerts":[{"code":"signature_match","reason":"Matched signature rule: pe_dos_header","severity":"Blocking"}],"candidate_bytes":0,"output_mime":"application/vnd.microsoft.portable-executable","read_validation_succeeded":false,"released":false,"returned_bytes":0,"stages":[{"detail":"pre_scan_alerts=1","stage":"PreScan","status":"Blocked"},{"detail":"blocked on input signature pre-scan","stage":"OutputValidation","status":"Blocked"}],"verdict":"Blocked"},"expected_reason_matched":true,"filename":"canary.png","input_bytes":52},"output_sha256":null,"passed":true,"policy":"dissertation_profile (resource overrides reported in metrics)","questions":["Q2"]}
+ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.14s
+
+     Running tests\generate_fixtures.rs (target\debug\deps\generate_fixtures-6f144e6b0897bacf.exe)
+
+running 1 test
+test generate_all_fixtures ... ignored
+
+test result: ok. 0 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\media_cli_contract.rs (target\debug\deps\media_cli_contract-50248f1c5687357b.exe)
+
+running 1 test
+test cli_audio_video_roundtrip_with_external_runtime ... ignored, requires MDO_TEST_FFMPEG and MDO_TEST_FFPROBE; exercised by the media CI job
+
+test result: ok. 0 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\reaction_simulation.rs (target\debug\deps\reaction_simulation-92ac769f54823473.exe)
+
+running 1 test
+test simulation_pack_shows_component_reaction ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests\realworld_simulation.rs (target\debug\deps\realworld_simulation-685b53bc58f1eec5.exe)
+
+running 11 tests
+test all_formats_produce_non_empty_output ... ok
+test realworld_gif_rebuild_preserves_frame_count ... ok
+test realworld_jpeg_rebuild_strips_exif ... ok
+test realworld_mp3_strips_id3_keeps_frames ... ok
+test realworld_png_rebuild_preserves_pixels ... ok
+test realworld_wav_strips_list_keeps_audio ... ok
+test synthetic_apng_metadata_stripped_but_missing_frame_control_withheld ... ok
+test synthetic_mp4_audio_metadata_stripped_but_fake_stream_withheld ... ok
+test synthetic_mp4_video_gps_stripped_but_fake_stream_withheld ... ok
+test synthetic_ogg_metadata_stripped_but_fake_packets_withheld ... ok
+test synthetic_webm_tags_stripped_but_fake_clusters_withheld ... ok
+
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+
+     Running tests\reconstruction_levels.rs (target\debug\deps\reconstruction_levels-b0eb8bb8845995c9.exe)
+
+running 3 tests
+test required_audio_transcode_never_falls_back_to_native_wav ... ok
+test required_video_transcode_never_falls_back_to_native_mp4 ... ok
+test semantic_audio_and_video_transcode_with_external_runtime ... ignored, requires MDO_TEST_FFMPEG and MDO_TEST_FFPROBE runtime paths
+
+test result: ok. 2 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests\release_contract.rs (target\debug\deps\release_contract-c5d616e3d520b607.exe)
+
+running 13 tests
+test clean_image_is_reread_then_released ... ok
+test clean_path_is_created_without_replacing_existing_files ... ok
+test dissertation_profile_does_not_downgrade_animated_images_to_structural_rebuild ... ok
+test false_declared_mime_is_rejected ... ok
+test ffi_withholds_blocked_and_suspicious_buffers ... ok
+test input_signature_block_never_returns_original_bytes ... ok
+test output_signature_block_never_returns_candidate_bytes ... ok
+test permissive_mismatch_policy_still_withholds_release ... ok
+test png_disguised_as_jpeg_is_rejected_even_within_the_image_family ... ok
+test rejected_path_does_not_create_or_replace_an_output ... ok
+test suspicious_result_never_returns_candidate_bytes ... ok
+test valid_apng_can_pass_an_explicit_structural_profile_after_all_frames_are_read ... ok
+test valid_apng_chunks_with_invalid_pixels_fail_the_separate_output_reader ... ok
+
+test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s
+
+     Running tests\tenant_registry_tests.rs (target\debug\deps\tenant_registry_tests-2de46b68b15962e1.exe)
+
+running 22 tests
+test tenant_media_signatures_distinguish_delimited_provenance_values ... ok
+test tenant_policy_signatures_distinguish_delimited_provenance_values ... ok
+test tenant_registry_accepts_previous_key_during_rotation ... ok
+test tenant_registry_allows_deprecated_key_within_grace_window ... ok
+test tenant_registry_can_export_and_import_snapshots ... ok
+test tenant_registry_clears_media_limit_override_without_dropping_base_policy ... ok
+test tenant_registry_falls_back_when_tenant_missing ... ok
+test tenant_registry_ignores_stale_media_limit_overrides ... ok
+test tenant_registry_import_ignores_stale_snapshots ... ok
+test tenant_registry_imports_hmac_media_snapshots_and_rejects_wrong_secret ... ok
+test tenant_registry_imports_hmac_policy_snapshots_and_rejects_wrong_secret ... ok
+test tenant_registry_imports_media_limit_overrides ... ok
+test tenant_registry_imports_signed_media_snapshots_and_rejects_tampered ... ok
+test tenant_registry_imports_signed_policy_snapshots_and_rejects_tampered ... ok
+test tenant_registry_preserves_override_provenance_on_import ... ok
+test tenant_registry_rejects_deprecated_key_after_grace_window ... ok
+test tenant_registry_rejects_stale_versioned_remove ... ok
+test tenant_registry_rejects_stale_versioned_upsert ... ok
+test tenant_registry_rejects_unknown_key_id_after_rotation ... ok
+test tenant_registry_tracks_hmac_key_usage_metrics ... ok
+test tenant_registry_upsert_and_remove_are_visible ... ok
+test tenant_registry_uses_tenant_snapshot_if_present ... ok
+
+test result: ok. 22 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.16s
+
+     Running tests\workspace_parity.rs (target\debug\deps\workspace_parity-a16ba3cc14304cbf.exe)
+
+running 1 test
+test workspace_crates_are_wired ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests defender_core
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests defender_ffi
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests defender_handlers_media
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests defender_observability
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests defender_signatures
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests mdo_cdr
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

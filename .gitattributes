@@ -1,0 +1,2 @@
+# Evidence checksums refer to exact bytes, including CSV line endings.
+/validation/runs/** -text

@@ -1,7 +1,6 @@
 use std::io::Write;
 use std::process::Command;
-use std::thread;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use symphonia::core::codecs::DecoderOptions;
 use symphonia::core::errors::Error as SymphoniaError;
@@ -50,6 +49,10 @@ impl AudioHandler {
         input_bytes: Vec<u8>,
         _context: DefenseContext,
     ) -> Result<HandlerResult, DefenderError> {
+        // A required transcode cannot fall back to preserving the coded stream.
+        if self.policy.mode == AudioMode::RequireFfmpeg {
+            return self.rebuild_with_ffmpeg(input_bytes, true);
+        }
         // Try native (pure-Rust, no-ffmpeg) container sanitization first.
         // This covers MP3, WAV, and FLAC — the three most common formats
         // that can be safely sanitized by stripping metadata at the
@@ -58,7 +61,14 @@ impl AudioHandler {
         // On mobile (where ffmpeg is never available), this is the ONLY
         // path that produces a real CDR result instead of a block.
         if let Some(native_result) = self.try_native_rebuild(&input_bytes) {
-            return native_result;
+            return native_result.map(|mut result| {
+                result.stages.push(PipelineStageReport {
+                    stage: PipelineStage::Rebuild,
+                    status: PipelineStageStatus::Success,
+                    detail: "achieved_reconstruction=structural".to_string(),
+                });
+                result
+            });
         }
 
         match self.policy.mode {
@@ -217,10 +227,11 @@ impl AudioHandler {
         &self,
         input_bytes: Vec<u8>,
     ) -> Result<HandlerResult, DefenderError> {
-        let ffmpeg_available = Command::new(&self.policy.ffmpeg_bin)
-            .arg("-version")
-            .output()
-            .is_ok();
+        let ffmpeg_available = crate::process::run_bounded(
+            Command::new(&self.policy.ffmpeg_bin).arg("-version"),
+            Duration::from_secs(self.policy.ffmpeg_timeout_secs),
+        )
+        .is_ok_and(|output| output.status.success());
 
         if ffmpeg_available {
             return self.rebuild_with_ffmpeg(input_bytes, true);
@@ -251,20 +262,30 @@ impl AudioHandler {
                 "audio input is empty and cannot be rebuilt".to_string(),
             ));
         }
-        let native_probe = native_decode_probe(&input_bytes);
-        let native_probe_failed = native_probe.is_err();
-
         let input = tempfile::NamedTempFile::new()?;
         let input_kind = infer::get(&input_bytes);
         let input_mime = input_kind.map(|value| value.mime_type().to_string());
-        let (plan, kept_original) =
-            resolve_transcode_plan(self.policy.output_codec, input_mime.as_deref());
+        let output_codec = if self.policy.mode == AudioMode::RequireFfmpeg
+            && self.policy.output_codec == AudioOutputCodec::KeepOriginalWhenPossible
+        {
+            AudioOutputCodec::Mp3
+        } else {
+            self.policy.output_codec
+        };
+        let (plan, kept_original) = resolve_transcode_plan(output_codec, input_mime.as_deref());
         let output = tempfile::Builder::new().suffix(plan.suffix).tempfile()?;
         input
             .as_file()
             .write_all(&input_bytes)
             .map_err(DefenderError::from)?;
 
+        let native_probe_failed = if self.policy.mode == AudioMode::RequireFfmpeg {
+            // The required decoder also supports codecs absent from Symphonia,
+            // such as Opus. This is input probing, not independent validation.
+            self.run_audio_probe(input.path()).is_err()
+        } else {
+            native_decode_probe(&input_bytes).is_err()
+        };
         let ffprobe_metrics = self.run_ffprobe_metrics(input.path());
 
         let mut command = Command::new(&self.policy.ffmpeg_bin);
@@ -273,13 +294,20 @@ impl AudioHandler {
             .arg("-nostdin")
             .arg("-v")
             .arg("error")
+            .args(["-protocol_whitelist", "file,pipe", "-threads", "2"])
             .arg("-i")
             .arg(input.path())
-            .arg("-map_metadata")
-            .arg("-1");
+            .args([
+                "-map",
+                "0:a:0",
+                "-map_metadata",
+                "-1",
+                "-map_chapters",
+                "-1",
+            ])
+            .args(["-vn", "-sn", "-dn", "-threads", "2"]);
         command.arg("-c:a").arg(plan.codec_arg).arg(output.path());
 
-        let command_result = command.spawn();
         let mut alerts = Vec::new();
         let mut stages = Vec::new();
         let ffprobe_metrics = match ffprobe_metrics {
@@ -358,13 +386,13 @@ impl AudioHandler {
                 match self.policy.probe_failure_mode {
                     ProbeFailureMode::Block => {
                         return Err(DefenderError::Audio(
-                            "native audio decoder probe failed under block mode".to_string(),
+                            "audio decoder probe failed under block mode".to_string(),
                         ));
                     }
                     ProbeFailureMode::Warn => {
                         alerts.push(DefenseAlert::warning(
                             "audio_native_decoder_probe_failed",
-                            "Native audio decoder probe failed; proceeding with ffmpeg fallback behavior.",
+                            "Audio decoder probe failed; proceeding with ffmpeg fallback behavior.",
                         ));
                     }
                 }
@@ -375,8 +403,7 @@ impl AudioHandler {
                 detail: "audio probe warning".to_string(),
             });
         }
-        if self.policy.output_codec == AudioOutputCodec::KeepOriginalWhenPossible && !kept_original
-        {
+        if output_codec == AudioOutputCodec::KeepOriginalWhenPossible && !kept_original {
             match self.policy.keep_original_mode {
                 AudioKeepOriginalMode::FallbackToMp3 => {
                     alerts.push(DefenseAlert::warning(
@@ -397,71 +424,28 @@ impl AudioHandler {
                 }
             }
         }
-        let Ok(mut child) = command_result else {
-            if strict {
-                return Err(DefenderError::Audio(
-                    "ffmpeg process failed to start for audio in strict mode".to_string(),
+        // Start the encoder only after every preflight policy check has passed.
+        let command_result = match crate::process::run_bounded(
+            &mut command,
+            Duration::from_secs(self.policy.ffmpeg_timeout_secs),
+        ) {
+            Ok(output) => output,
+            Err(error) => {
+                if strict {
+                    return Err(DefenderError::Audio(format!(
+                        "ffmpeg audio execution failed: {error}"
+                    )));
+                }
+                alerts.push(DefenseAlert::warning(
+                    "ffmpeg_execution_failed_audio",
+                    format!("ffmpeg audio execution failed: {error}"),
                 ));
-            }
-            alerts.push(DefenseAlert::warning(
-                "ffmpeg_missing_audio",
-                "ffmpeg is unavailable; bypassing audio rebuild",
-            ));
-            return Ok(HandlerResult {
-                mime: "audio/raw".to_string(),
-                output_bytes: input_bytes,
-                alerts,
-                stages,
-            });
-        };
-
-        let timeout = Duration::from_secs(self.policy.ffmpeg_timeout_secs);
-        let start = Instant::now();
-        let command_result = loop {
-            match child.try_wait() {
-                Ok(Some(_)) => {
-                    let value = child.wait_with_output()?;
-                    break value;
-                }
-                Ok(None) => {
-                    if start.elapsed() >= timeout {
-                        let _ = child.kill();
-                        let _ = child.wait();
-                        if strict {
-                            return Err(DefenderError::Audio(
-                                "ffmpeg timed out for audio in strict mode".to_string(),
-                            ));
-                        }
-                        alerts.push(DefenseAlert::warning(
-                            "ffmpeg_timeout_audio",
-                            "ffmpeg timed out; bypassing audio rebuild",
-                        ));
-                        return Ok(HandlerResult {
-                            mime: "audio/raw".to_string(),
-                            output_bytes: input_bytes,
-                            alerts,
-                            stages,
-                        });
-                    }
-                    thread::sleep(Duration::from_millis(40));
-                }
-                Err(value) => {
-                    if strict {
-                        return Err(DefenderError::Audio(format!(
-                            "ffmpeg polling failed for audio in strict mode: {value}"
-                        )));
-                    }
-                    alerts.push(DefenseAlert::warning(
-                        "ffmpeg_poll_failed_audio",
-                        "ffmpeg status polling failed; bypassing audio rebuild",
-                    ));
-                    return Ok(HandlerResult {
-                        mime: "audio/raw".to_string(),
-                        output_bytes: input_bytes,
-                        alerts,
-                        stages,
-                    });
-                }
+                return Ok(HandlerResult {
+                    mime: "audio/raw".to_string(),
+                    output_bytes: input_bytes,
+                    alerts,
+                    stages,
+                });
             }
         };
 
@@ -602,6 +586,15 @@ impl AudioHandler {
                 stages,
             });
         }
+        stages.push(PipelineStageReport {
+            stage: PipelineStage::Rebuild,
+            status: PipelineStageStatus::Success,
+            detail: if plan.codec_arg == "copy" {
+                "achieved_reconstruction=structural".to_string()
+            } else {
+                "achieved_reconstruction=semantic".to_string()
+            },
+        });
         Ok(HandlerResult {
             mime: plan.mime.to_string(),
             output_bytes,
@@ -610,22 +603,50 @@ impl AudioHandler {
         })
     }
 
+    fn run_audio_probe(&self, input_path: &std::path::Path) -> Result<(), DefenderError> {
+        let output = crate::process::run_bounded(
+            Command::new(&self.policy.ffmpeg_bin)
+                .args([
+                    "-v",
+                    "error",
+                    "-nostdin",
+                    "-protocol_whitelist",
+                    "file,pipe",
+                ])
+                .args(["-threads", "2", "-i"])
+                .arg(input_path)
+                .args(["-map", "0:a:0", "-vn", "-sn", "-dn", "-f", "null", "-"]),
+            Duration::from_secs(self.policy.ffmpeg_timeout_secs),
+        )
+        .map_err(|error| DefenderError::Audio(format!("audio probe execution failed: {error}")))?;
+        if !output.status.success() {
+            return Err(DefenderError::Audio(format!(
+                "audio probe decode failed: {}",
+                String::from_utf8_lossy(&output.stderr)
+            )));
+        }
+        Ok(())
+    }
+
     fn run_ffprobe_metrics(
         &self,
         input_path: &std::path::Path,
     ) -> Result<AudioProbeMetrics, DefenderError> {
-        let output = Command::new(&self.policy.ffprobe_bin)
-            .arg("-v")
-            .arg("error")
-            .arg("-select_streams")
-            .arg("a:0")
-            .arg("-show_entries")
-            .arg("stream=channels,bit_rate:format=duration,bit_rate")
-            .arg("-of")
-            .arg("default=noprint_wrappers=1:nokey=0")
-            .arg(input_path)
-            .output()
-            .map_err(|value| DefenderError::Audio(format!("ffprobe failed to start: {value}")))?;
+        let output = crate::process::run_bounded(
+            Command::new(&self.policy.ffprobe_bin)
+                .args(["-protocol_whitelist", "file,pipe", "-threads", "2"])
+                .arg("-v")
+                .arg("error")
+                .arg("-select_streams")
+                .arg("a:0")
+                .arg("-show_entries")
+                .arg("stream=channels,bit_rate:format=duration,bit_rate")
+                .arg("-of")
+                .arg("default=noprint_wrappers=1:nokey=0")
+                .arg(input_path),
+            Duration::from_secs(self.policy.ffmpeg_timeout_secs),
+        )
+        .map_err(|value| DefenderError::Audio(format!("ffprobe execution failed: {value}")))?;
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
             return Err(DefenderError::Audio(format!(

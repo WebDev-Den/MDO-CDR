@@ -1,0 +1,9 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.20s
+     Running tests\dissertation_media.rs (target\debug\deps\dissertation_media-74f16ed858d52c70.exe)
+
+running 1 test
+MDO_EVIDENCE {"case_id":"generated_video_content","expected":"release; same 96x64 dimensions; duration error <= 0.02; SSIM >= 0.90 on all 36 fixed-grid frames","group":"S0","input_sha256":"89b215933331a2b11870036a4f04115e49444ed2ce1d640072e63620f9eba773","metrics":{"cli_exit_code":0,"compared_frames":36,"duration_relative_error":0.0,"duration_relative_error_max":0.02,"expected_compared_frames":36,"external_decoder":"FFmpeg","external_evaluator_count":1,"fixture_origin":"generated_control_not_dissertation_corpus","frame_grid_fps":12,"input_bytes":78466,"input_decoded_frames":36,"input_dimensions":[96,64],"input_duration_seconds":3.0,"output_bytes":18787,"output_decoded_frames":36,"output_dimensions":[96,64],"output_duration_seconds":3.0,"output_path_present":true,"released":true,"ssim_all_frames":[0.993522,0.990422,0.989133,0.988744,0.988632,0.986051,0.985991,0.986008,0.989201,0.988135,0.987991,0.985905,0.987617,0.986628,0.988274,0.983614,0.98648,0.984261,0.987975,0.987212,0.986781,0.985045,0.987151,0.987326,0.985885,0.988811,0.988315,0.985158,0.985593,0.984039,0.98641,0.984762,0.983079,0.984904,0.98451,0.979688],"ssim_mean":0.9866459166666667,"ssim_min_required":0.9,"wall_time_ms":454.0084},"output_sha256":"c768bc498da8b11074b460e7ba363f477780ee7d869b15a4dcb8c2cd280fc47b","passed":true,"questions":["Q1","Q4"]}
+test video_content_matches_dissertation_thresholds ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.45s
+

@@ -1126,6 +1126,7 @@ struct CanonicalMediaSnapshotPayload<'a> {
 
 #[derive(Serialize)]
 struct CanonicalDefensePolicy<'a> {
+    minimum_reconstruction_level: crate::policy::ReconstructionLevel,
     max_handler_duration_ms: u64,
     max_input_size_bytes: u64,
     max_output_size_bytes: u64,
@@ -1167,6 +1168,7 @@ enum CanonicalSignatureLocation {
 
 fn canonical_defense_policy(policy: &DefensePolicy) -> CanonicalDefensePolicy<'_> {
     CanonicalDefensePolicy {
+        minimum_reconstruction_level: policy.minimum_reconstruction_level,
         max_handler_duration_ms: policy.max_handler_duration_ms,
         max_input_size_bytes: policy.max_input_size_bytes,
         max_output_size_bytes: policy.max_output_size_bytes,

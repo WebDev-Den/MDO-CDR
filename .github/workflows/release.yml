@@ -2,64 +2,70 @@ name: Release
 
 on:
   push:
-    tags:
-      - 'v*'
+    tags: ['v*']
 
 permissions:
-  contents: write
+  contents: read
 
-env:
-  CARGO_TERM_COLOR: always
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
-  create-release:
-    name: Create GitHub Release
+  version:
+    name: Check release version
     runs-on: ubuntu-latest
-    outputs:
-      upload_url: ${{ steps.create_release.outputs.upload_url }}
+    timeout-minutes: 5
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v7
-
-      - name: Create Release
-        id: create_release
-        uses: softprops/action-gh-release@v3
+      - uses: actions/checkout@v7.0.1
         with:
-          name: Release ${{ github.ref_name }}
-          draft: false
-          prerelease: false
+          persist-credentials: false
+      - name: Require a tag matching Cargo.toml
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          python3 - <<'PY'
+          import os
+          import tomllib
+          with open('Cargo.toml', 'rb') as source:
+              version = tomllib.load(source)['package']['version']
+          expected = f'v{version}'
+          if os.environ['RELEASE_TAG'] != expected:
+              raise SystemExit(f'Release tag must be {expected}')
+          PY
+
+  verify:
+    name: Verify release
+    needs: version
+    uses: ./.github/workflows/ci.yml
+
+  publish:
+    name: Publish tested packages
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Download packages from this CI run
+        uses: actions/download-artifact@v8.0.1
+        with:
+          pattern: MDO-CDR-*
+          path: release-assets
+          merge-multiple: true
+      - name: Check package checksums
+        working-directory: release-assets
+        run: |
+          test "$(find . -maxdepth 1 -name '*.sha256' | wc -l)" -eq 3
+          sha256sum --check ./*.sha256
+      - name: Create release only after successful verification
+        uses: softprops/action-gh-release@v3.0.3
+        with:
+          name: MDO-CDR ${{ github.ref_name }}
           generate_release_notes: true
-
-  build-and-upload:
-    name: Build & Upload Assets
-    needs: create-release
-    strategy:
-      matrix:
-        include:
-          - os: ubuntu-latest
-            artifact_name: libmdo_cdr-linux-x86_64.tar.gz
-            asset_path: target/release/libmdo_cdr.so
-            asset_name: libmdo_cdr-linux-x86_64.so
-          - os: windows-latest
-            artifact_name: mdo_cdr-windows-x86_64.zip
-            asset_path: target/release/mdo_cdr.dll
-            asset_name: mdo_cdr-windows-x86_64.dll
-          - os: macos-latest
-            artifact_name: libmdo_cdr-macos-x86_64.tar.gz
-            asset_path: target/release/libmdo_cdr.dylib
-            asset_name: libmdo_cdr-macos-x86_64.dylib
-    runs-on: ${{ matrix.os }}
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v7
-
-      - name: Set up Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Build release C-ABI library
-        run: cargo build --release --lib
-
-      - name: Upload Release Asset
-        uses: softprops/action-gh-release@v3
-        with:
-          files: ${{ matrix.asset_path }}
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          fail_on_unmatched_files: true
+          files: |
+            release-assets/*.zip
+            release-assets/*.tar.gz
+            release-assets/*.sha256

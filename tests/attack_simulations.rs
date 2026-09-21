@@ -117,7 +117,7 @@ fn bomb_apng_excessive_chunks_rejected() {
 // ═══════════════════════════════════════════════════════════════════════
 
 #[test]
-fn metadata_mp3_id3v2_with_embedded_exe_stripped() {
+fn synthetic_mp3_metadata_stripped_but_incomplete_frames_withheld() {
     // MP3 with a large ID3v2 tag containing a fake PE executable payload.
     let defender = default_defender();
     let mut input = Vec::new();
@@ -139,6 +139,11 @@ fn metadata_mp3_id3v2_with_embedded_exe_stripped() {
     input.extend_from_slice(&[0xFF, 0xFB, 0x90, 0x00]);
     input.extend_from_slice(&[0u8; 200]);
 
+    // A container rewrite does not establish that the synthetic codec payload is decodable.
+    let native = mdo_cdr::handlers::audio_native::try_sanitize_mp3(&input)
+        .unwrap()
+        .unwrap();
+
     let result = defender
         .defend_bytes(
             input,
@@ -146,14 +151,15 @@ fn metadata_mp3_id3v2_with_embedded_exe_stripped() {
             DefenseContext::default(),
         )
         .expect("should return result");
+    assert_failed_read_withheld(&result, native.output_bytes.len() as u64);
     // Output must NOT contain MZ header — ID3 was stripped.
-    assert!(!result.artifact.output_bytes.starts_with(b"MZ"));
+    assert!(!native.output_bytes.starts_with(b"MZ"));
     // Output must start with sync word.
-    assert_eq!(&result.artifact.output_bytes[0..2], &[0xFF, 0xFB]);
+    assert_eq!(&native.output_bytes[0..2], &[0xFF, 0xFB]);
 }
 
 #[test]
-fn metadata_mp4_udta_with_gps_coordinates_stripped() {
+fn synthetic_mp4_metadata_stripped_but_fake_stream_withheld() {
     let defender = default_defender();
     let mut input = Vec::new();
     input.extend_from_slice(&make_mp4_atom(b"ftyp", b"isom\x00\x00\x00\x00"));
@@ -168,6 +174,11 @@ fn metadata_mp4_udta_with_gps_coordinates_stripped() {
     input.extend_from_slice(&moov);
     input.extend_from_slice(&make_mp4_atom(b"mdat", b"aac-audio-data"));
 
+    // A container rewrite does not establish that the synthetic codec payload is decodable.
+    let native = mdo_cdr::handlers::mp4_native::try_sanitize_mp4(&input)
+        .unwrap()
+        .unwrap();
+
     let result = defender
         .defend_bytes(
             input,
@@ -175,7 +186,8 @@ fn metadata_mp4_udta_with_gps_coordinates_stripped() {
             DefenseContext::default(),
         )
         .expect("should return result");
-    let output_str = String::from_utf8_lossy(&result.artifact.output_bytes);
+    assert_failed_read_withheld(&result, native.output_bytes.len() as u64);
+    let output_str = String::from_utf8_lossy(&native.output_bytes);
     assert!(
         !output_str.contains("GPS"),
         "GPS coordinates must be stripped"
@@ -187,7 +199,7 @@ fn metadata_mp4_udta_with_gps_coordinates_stripped() {
 }
 
 #[test]
-fn metadata_ogg_opus_tags_with_album_art_stripped() {
+fn synthetic_ogg_metadata_stripped_but_fake_packets_withheld() {
     let defender = default_defender();
     let mut input = Vec::new();
     // BOS page with OpusHead
@@ -205,6 +217,11 @@ fn metadata_ogg_opus_tags_with_album_art_stripped() {
     // Audio page
     input.extend_from_slice(&make_ogg_page(0x04, 1, 2, 48000, b"opus-audio-frames"));
 
+    // A container rewrite does not establish that the synthetic codec payload is decodable.
+    let native = mdo_cdr::handlers::ogg_native::try_sanitize_ogg(&input)
+        .unwrap()
+        .unwrap();
+
     let result = defender
         .defend_bytes(
             input,
@@ -212,7 +229,8 @@ fn metadata_ogg_opus_tags_with_album_art_stripped() {
             DefenseContext::default(),
         )
         .expect("should return result");
-    let output_str = String::from_utf8_lossy(&result.artifact.output_bytes);
+    assert_failed_read_withheld(&result, native.output_bytes.len() as u64);
+    let output_str = String::from_utf8_lossy(&native.output_bytes);
     assert!(
         !output_str.contains("METADATA_BLOCK_PICTURE"),
         "album art must be stripped"
@@ -245,7 +263,7 @@ fn metadata_wav_list_info_stripped() {
 }
 
 #[test]
-fn metadata_flac_vorbis_comment_and_picture_stripped() {
+fn synthetic_flac_metadata_stripped_but_fake_frames_withheld() {
     let defender = default_defender();
     let mut input = Vec::new();
     input.extend_from_slice(b"fLaC");
@@ -269,6 +287,11 @@ fn metadata_flac_vorbis_comment_and_picture_stripped() {
     input.extend_from_slice(&[0xFF, 0xF8, 0x00, 0x00]);
     input.extend_from_slice(&[0u8; 100]);
 
+    // A container rewrite does not establish that the synthetic codec payload is decodable.
+    let native = mdo_cdr::handlers::audio_native::try_sanitize_flac(&input)
+        .unwrap()
+        .unwrap();
+
     let result = defender
         .defend_bytes(
             input,
@@ -276,7 +299,8 @@ fn metadata_flac_vorbis_comment_and_picture_stripped() {
             DefenseContext::default(),
         )
         .expect("should return result");
-    let output_str = String::from_utf8_lossy(&result.artifact.output_bytes);
+    assert_failed_read_withheld(&result, native.output_bytes.len() as u64);
+    let output_str = String::from_utf8_lossy(&native.output_bytes);
     assert!(!output_str.contains("Evil"), "VORBIS_COMMENT stripped");
     assert!(!output_str.contains("fake-jpeg"), "PICTURE stripped");
 }
@@ -751,14 +775,29 @@ fn policy_blocks_wasm_extension() {
 #[test]
 fn strict_profile_blocks_unknown_extensions() {
     let defender = strict_defender();
+    let image = image::RgbImage::from_pixel(2, 2, image::Rgb([20, 40, 60]));
+    let mut input = Vec::new();
+    image
+        .write_to(
+            &mut std::io::Cursor::new(&mut input),
+            image::ImageFormat::Png,
+        )
+        .unwrap();
     let result = defender
         .defend_bytes(
-            b"unknown-content".to_vec(),
+            input,
             Some("data.xyz".to_string()),
             DefenseContext::default(),
         )
         .expect("should return result");
     assert_eq!(result.verdict, DefenseVerdict::Blocked);
+    assert!(result.artifact.output_bytes.is_empty());
+    assert!(
+        result
+            .alerts
+            .iter()
+            .any(|alert| alert.code == "unknown_extension")
+    );
 }
 
 #[test]
@@ -918,4 +957,24 @@ fn build_minimal_wav_with_list(list_data: &[u8]) -> Vec<u8> {
     input.extend_from_slice(&4u32.to_le_bytes());
     input.extend_from_slice(&[0x80, 0x00, 0x80, 0x00]);
     input
+}
+
+fn assert_failed_read_withheld(result: &mdo_cdr::DefendResult, candidate_size: u64) {
+    assert_eq!(result.verdict, DefenseVerdict::Blocked);
+    assert!(
+        result.artifact.output_bytes.is_empty(),
+        "an unverified candidate cannot be released"
+    );
+    assert_eq!(
+        result.artifact.output_size, candidate_size,
+        "the examined candidate size remains available for audit"
+    );
+    assert!(
+        result
+            .alerts
+            .iter()
+            .any(|alert| alert.code == "output_read_failed"),
+        "the separate output reader must reject the synthetic payload: {:?}",
+        result.alerts
+    );
 }

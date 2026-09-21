@@ -202,7 +202,11 @@ impl FfiDefendResult {
         }
         .encode_to_vec();
 
-        let (output_ptr, output_len, output_cap) = vec_into_raw_parts(output_bytes);
+        let (output_ptr, output_len, output_cap) = if verdict == DefenseVerdict::Clean {
+            vec_into_raw_parts(output_bytes)
+        } else {
+            (std::ptr::null_mut(), 0, 0)
+        };
         let (metadata_proto_ptr, metadata_proto_len, metadata_proto_cap) =
             vec_into_raw_parts(metadata_proto);
 
@@ -475,6 +479,9 @@ fn stage_status_code(status: crate::PipelineStageStatus) -> i32 {
 }
 
 fn vec_into_raw_parts(mut value: Vec<u8>) -> (*mut u8, usize, usize) {
+    if value.is_empty() {
+        return (std::ptr::null_mut(), 0, 0);
+    }
     let ptr = value.as_mut_ptr();
     let len = value.len();
     let cap = value.capacity();
@@ -495,8 +502,14 @@ mod tests {
 
     #[test]
     fn ffi_roundtrip_success() {
-        let input = b"hello-from-swift".to_vec();
-        let file_name = CString::new("note.txt");
+        let mut input = Vec::new();
+        image::DynamicImage::new_rgb8(2, 2)
+            .write_to(
+                &mut std::io::Cursor::new(&mut input),
+                image::ImageFormat::Png,
+            )
+            .expect("encode PNG fixture");
+        let file_name = CString::new("picture.png");
         let tenant = CString::new("tenant-a");
 
         let file_name = match file_name {
@@ -600,5 +613,37 @@ mod tests {
         assert_eq!(decoded.verdict, super::FFI_VERDICT_BLOCKED);
         assert_eq!(decoded.file_kind, super::FFI_FILE_KIND_AUDIO);
         assert_eq!(decoded.stages.len(), 1);
+    }
+
+    #[test]
+    fn ffi_defensively_drops_nonclean_payloads() {
+        for verdict in [
+            crate::DefenseVerdict::Blocked,
+            crate::DefenseVerdict::Suspicious,
+        ] {
+            let result = super::FfiDefendResult::success(crate::DefendResult {
+                verdict,
+                alerts: vec![],
+                stages: vec![],
+                artifact: crate::DefendedArtifact {
+                    file_kind: crate::FileKind::Other,
+                    mime: "application/octet-stream".into(),
+                    original_size: 4,
+                    output_size: 4,
+                    sha256: "candidate-digest".into(),
+                    output_bytes: b"data".to_vec(),
+                },
+                diagnostics: Default::default(),
+            });
+            assert!(result.output_ptr.is_null());
+            assert_eq!((result.output_len, result.output_cap), (0, 0));
+            unsafe {
+                super::file_defender_free_buffer(
+                    result.metadata_proto_ptr,
+                    result.metadata_proto_len,
+                    result.metadata_proto_cap,
+                );
+            }
+        }
     }
 }

@@ -2,96 +2,140 @@ name: CI
 
 on:
   push:
-    branches: [ main, master ]
+    branches: ['**']
   pull_request:
-    branches: [ main, master ]
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
   CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: '0'
+  RUST_BACKTRACE: '1'
+  RUST_VERSION: '1.98.1'
 
 jobs:
-  check-and-test:
-    name: Check, Lint & Test
+  quality:
+    name: Formatting and Clippy
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v7
-
-      - name: Install system dependencies (FFmpeg)
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y ffmpeg
-
-      - name: Set up Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+      - uses: actions/checkout@v7.0.1
         with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
           components: rustfmt, clippy
-
-      - name: Rust cache
-        uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: |
-            .
-            crates/*
-
-      - name: Check code formatting
+      - uses: Swatinem/rust-cache@v2.9.2
+      - name: Check formatting
         run: cargo fmt --all --check
+      - name: Check all targets with Clippy
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
 
-      - name: Compile workspace (all targets)
-        run: cargo build --workspace --all-targets
-
-      - name: Run unit & integration tests
-        run: cargo test --workspace --all-targets --verbose
-
-      - name: Run Clippy linter
-        run: cargo clippy --workspace --all-targets -- -D warnings
-
-      - name: Build crate packages
-        run: cargo package --workspace --no-verify
-
-  bench-smoke:
-    name: Benchmark Smoke Check
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v7
-
-      - name: Set up Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Rust cache
-        uses: Swatinem/rust-cache@v2
-
-      - name: Run Criterion smoke benchmarks
-        run: cargo bench --bench pipeline_bench -- --sample-size 10
-
-  build-artifacts:
-    name: Build Release Libraries
+  test-and-build:
+    name: Test and build (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-    runs-on: ${{ matrix.os }}
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v7
-
-      - name: Set up Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Rust cache
-        uses: Swatinem/rust-cache@v2
-
-      - name: Build release binaries & C-ABI libraries
-        run: cargo build --release --lib
-
-      - name: Upload build artifact
-        uses: actions/upload-artifact@v6
+      - uses: actions/checkout@v7.0.1
         with:
-          name: mdo_cdr-library-${{ matrix.os }}
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+      - uses: Swatinem/rust-cache@v2.9.2
+      - name: Unit, integration and documentation tests
+        run: cargo test --workspace --locked
+      - name: Build CLI and C ABI libraries
+        run: cargo build --release --locked --lib --bin mdocdr
+      - name: Check the release executable
+        shell: pwsh
+        run: |
+          $binary = if ($IsWindows) { './target/release/mdocdr.exe' } else { './target/release/mdocdr' }
+          & $binary --self-test
+          if ($LASTEXITCODE -ne 0) { throw 'Release self-test failed' }
+      - name: Check Windows launcher
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          New-Item -ItemType Directory -Path bin -Force | Out-Null
+          Copy-Item -LiteralPath target/release/mdocdr.exe -Destination bin/mdocdr.exe
+          $result = .\Start.ps1 -SmokeTest | ConvertFrom-Json
+          if (-not $result.ok -or -not $result.executable_exists) {
+            throw 'Windows launcher smoke test failed'
+          }
+          $result | ConvertTo-Json
+      - name: Package the tested program
+        shell: pwsh
+        run: ./scripts/package-release.ps1
+      - name: Upload packages
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: MDO-CDR-${{ runner.os }}-${{ runner.arch }}
           path: |
-            target/release/*.dll
-            target/release/*.so
-            target/release/*.dylib
-            target/release/*.a
-            target/release/*.lib
-          if-no-files-found: ignore
+            dist-packages/*.zip
+            dist-packages/*.tar.gz
+            dist-packages/*.sha256
+          if-no-files-found: error
+          retention-days: 14
+
+  media:
+    name: Real audio and video (FFmpeg)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      MDO_TEST_FFMPEG: /usr/bin/ffmpeg
+      MDO_TEST_FFPROBE: /usr/bin/ffprobe
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install multimedia runtime
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends ffmpeg
+          ffmpeg -version
+          ffprobe -version
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+      - uses: Swatinem/rust-cache@v2.9.2
+      - name: Run dissertation controls and preserve measured evidence
+        shell: pwsh
+        run: ./scripts/test-dissertation.ps1 -RunName ci-${{ github.run_id }}-${{ github.run_attempt }}
+      - name: Upload dissertation evidence, including failed observations
+        if: always()
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: dissertation-evidence-${{ runner.os }}-${{ runner.arch }}
+          path: validation/runs/ci-${{ github.run_id }}-${{ github.run_attempt }}/
+          if-no-files-found: error
+          retention-days: 90
+
+  ci-passed:
+    name: CI passed
+    if: always()
+    needs: [quality, test-and-build, media]
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Require every check to pass
+        env:
+          QUALITY: ${{ needs.quality.result }}
+          TESTS: ${{ needs.test-and-build.result }}
+          MEDIA: ${{ needs.media.result }}
+        run: |
+          test "$QUALITY" = success
+          test "$TESTS" = success
+          test "$MEDIA" = success

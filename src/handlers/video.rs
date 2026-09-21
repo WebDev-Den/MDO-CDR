@@ -1,7 +1,6 @@
 use std::io::Write;
 use std::process::Command;
-use std::thread;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use crate::{
     DefenderError,
@@ -34,6 +33,10 @@ impl VideoHandler {
         input_bytes: Vec<u8>,
         _context: DefenseContext,
     ) -> Result<HandlerResult, DefenderError> {
+        // A required transcode cannot be satisfied by a native container rewrite.
+        if self.policy.mode == VideoMode::RequireFfmpeg {
+            return self.rebuild_with_ffmpeg(input_bytes, true);
+        }
         // Try native MP4 container sanitization first (strips metadata
         // atoms, preserves codec bitstream). Works on mobile without ffmpeg.
         if let Some(mp4_result) = super::mp4_native::try_sanitize_mp4(&input_bytes) {
@@ -59,11 +62,21 @@ impl VideoHandler {
                         mime: "video/mp4".to_string(),
                         output_bytes: native.output_bytes,
                         alerts,
-                        stages: vec![PipelineStageReport {
-                            stage: PipelineStage::VideoProbe,
-                            status: PipelineStageStatus::Success,
-                            detail: format!("native MP4 CDR: stripped={}", native.stripped_count),
-                        }],
+                        stages: vec![
+                            PipelineStageReport {
+                                stage: PipelineStage::VideoProbe,
+                                status: PipelineStageStatus::Success,
+                                detail: format!(
+                                    "native MP4 CDR: stripped={}",
+                                    native.stripped_count
+                                ),
+                            },
+                            PipelineStageReport {
+                                stage: PipelineStage::Rebuild,
+                                status: PipelineStageStatus::Success,
+                                detail: "achieved_reconstruction=structural".to_string(),
+                            },
+                        ],
                     });
                 }
                 Err(err) => {
@@ -98,11 +111,21 @@ impl VideoHandler {
                         mime: "video/webm".to_string(),
                         output_bytes: native.output_bytes,
                         alerts,
-                        stages: vec![PipelineStageReport {
-                            stage: PipelineStage::VideoProbe,
-                            status: PipelineStageStatus::Success,
-                            detail: format!("native WebM CDR: stripped={}", native.stripped_count),
-                        }],
+                        stages: vec![
+                            PipelineStageReport {
+                                stage: PipelineStage::VideoProbe,
+                                status: PipelineStageStatus::Success,
+                                detail: format!(
+                                    "native WebM CDR: stripped={}",
+                                    native.stripped_count
+                                ),
+                            },
+                            PipelineStageReport {
+                                stage: PipelineStage::Rebuild,
+                                status: PipelineStageStatus::Success,
+                                detail: "achieved_reconstruction=structural".to_string(),
+                            },
+                        ],
                     });
                 }
                 Err(err) => {
@@ -125,10 +148,11 @@ impl VideoHandler {
         &self,
         input_bytes: Vec<u8>,
     ) -> Result<HandlerResult, DefenderError> {
-        let ffmpeg_available = Command::new(&self.policy.ffmpeg_bin)
-            .arg("-version")
-            .output()
-            .is_ok();
+        let ffmpeg_available = crate::process::run_bounded(
+            Command::new(&self.policy.ffmpeg_bin).arg("-version"),
+            Duration::from_secs(self.policy.ffmpeg_timeout_secs),
+        )
+        .is_ok_and(|output| output.status.success());
 
         if ffmpeg_available {
             return self.rebuild_with_ffmpeg(input_bytes, true);
@@ -160,7 +184,7 @@ impl VideoHandler {
             ));
         }
         let input = tempfile::NamedTempFile::new()?;
-        let output = tempfile::NamedTempFile::new()?;
+        let output = tempfile::Builder::new().suffix(".mp4").tempfile()?;
 
         input
             .as_file()
@@ -170,23 +194,25 @@ impl VideoHandler {
         let video_probe = self.run_video_probe(input.path());
         let ffprobe_metrics = self.run_ffprobe_metrics(input.path());
 
-        let command_result = Command::new(&self.policy.ffmpeg_bin)
+        let mut command = Command::new(&self.policy.ffmpeg_bin);
+        command
             .arg("-y")
             .arg("-nostdin")
             .arg("-v")
             .arg("error")
+            .args(["-protocol_whitelist", "file,pipe", "-threads", "2"])
             .arg("-i")
             .arg(input.path())
-            .arg("-map_metadata")
-            .arg("-1")
+            .args(["-map", "0:v:0", "-map", "0:a:0?"])
+            .args(["-map_metadata", "-1", "-map_chapters", "-1", "-sn", "-dn"])
+            .args(["-threads", "2", "-filter_threads", "2"])
             .arg("-c:v")
             .arg("libx264")
             .arg("-c:a")
             .arg("aac")
             .arg("-movflags")
             .arg("+faststart")
-            .arg(output.path())
-            .spawn();
+            .arg(output.path());
 
         let mut alerts = Vec::new();
         let mut stages = Vec::new();
@@ -270,71 +296,28 @@ impl VideoHandler {
                 detail: "video probe warning".to_string(),
             });
         }
-        let Ok(mut child) = command_result else {
-            if strict {
-                return Err(DefenderError::Video(
-                    "ffmpeg process failed to start in strict mode".to_string(),
+        // Start the encoder only after every preflight policy check has passed.
+        let command_result = match crate::process::run_bounded(
+            &mut command,
+            Duration::from_secs(self.policy.ffmpeg_timeout_secs),
+        ) {
+            Ok(output) => output,
+            Err(error) => {
+                if strict {
+                    return Err(DefenderError::Video(format!(
+                        "ffmpeg video execution failed: {error}"
+                    )));
+                }
+                alerts.push(DefenseAlert::warning(
+                    "ffmpeg_execution_failed_video",
+                    format!("ffmpeg video execution failed: {error}"),
                 ));
-            }
-            alerts.push(DefenseAlert::warning(
-                "ffmpeg_missing",
-                "ffmpeg is unavailable; bypassing video rebuild",
-            ));
-            return Ok(HandlerResult {
-                mime: "video/raw".to_string(),
-                output_bytes: input_bytes,
-                alerts,
-                stages,
-            });
-        };
-
-        let timeout = Duration::from_secs(self.policy.ffmpeg_timeout_secs);
-        let start = Instant::now();
-        let command_result = loop {
-            match child.try_wait() {
-                Ok(Some(_)) => {
-                    let value = child.wait_with_output()?;
-                    break value;
-                }
-                Ok(None) => {
-                    if start.elapsed() >= timeout {
-                        let _ = child.kill();
-                        let _ = child.wait();
-                        if strict {
-                            return Err(DefenderError::Video(
-                                "ffmpeg timed out in strict mode".to_string(),
-                            ));
-                        }
-                        alerts.push(DefenseAlert::warning(
-                            "ffmpeg_timeout",
-                            "ffmpeg timed out; bypassing video rebuild",
-                        ));
-                        return Ok(HandlerResult {
-                            mime: "video/raw".to_string(),
-                            output_bytes: input_bytes,
-                            alerts,
-                            stages,
-                        });
-                    }
-                    thread::sleep(Duration::from_millis(40));
-                }
-                Err(value) => {
-                    if strict {
-                        return Err(DefenderError::Video(format!(
-                            "ffmpeg status polling failed in strict mode: {value}"
-                        )));
-                    }
-                    alerts.push(DefenseAlert::warning(
-                        "ffmpeg_poll_failed",
-                        "ffmpeg status polling failed; bypassing video rebuild",
-                    ));
-                    return Ok(HandlerResult {
-                        mime: "video/raw".to_string(),
-                        output_bytes: input_bytes,
-                        alerts,
-                        stages,
-                    });
-                }
+                return Ok(HandlerResult {
+                    mime: "video/raw".to_string(),
+                    output_bytes: input_bytes,
+                    alerts,
+                    stages,
+                });
             }
         };
 
@@ -409,6 +392,11 @@ impl VideoHandler {
                 stages,
             });
         }
+        stages.push(PipelineStageReport {
+            stage: PipelineStage::Rebuild,
+            status: PipelineStageStatus::Success,
+            detail: "achieved_reconstruction=semantic".to_string(),
+        });
         Ok(HandlerResult {
             mime: "video/mp4".to_string(),
             output_bytes,
@@ -418,20 +406,23 @@ impl VideoHandler {
     }
 
     fn run_video_probe(&self, input_path: &std::path::Path) -> Result<(), DefenderError> {
-        let output = Command::new(&self.policy.ffmpeg_bin)
-            .arg("-v")
-            .arg("error")
-            .arg("-nostdin")
-            .arg("-i")
-            .arg(input_path)
-            .arg("-map")
-            .arg("0:v:0")
-            .arg("-frames:v")
-            .arg("1")
-            .arg("-f")
-            .arg("null")
-            .arg("-")
-            .output();
+        let output = crate::process::run_bounded(
+            Command::new(&self.policy.ffmpeg_bin)
+                .args(["-protocol_whitelist", "file,pipe", "-threads", "2"])
+                .arg("-v")
+                .arg("error")
+                .arg("-nostdin")
+                .arg("-i")
+                .arg(input_path)
+                .arg("-map")
+                .arg("0:v:0")
+                .arg("-frames:v")
+                .arg("1")
+                .arg("-f")
+                .arg("null")
+                .arg("-"),
+            Duration::from_secs(self.policy.ffmpeg_timeout_secs),
+        );
         let output = match output {
             Ok(value) => value,
             Err(value) => {
@@ -453,18 +444,21 @@ impl VideoHandler {
         &self,
         input_path: &std::path::Path,
     ) -> Result<VideoProbeMetrics, DefenderError> {
-        let output = Command::new(&self.policy.ffprobe_bin)
-            .arg("-v")
-            .arg("error")
-            .arg("-select_streams")
-            .arg("v:0")
-            .arg("-show_entries")
-            .arg("stream=bit_rate:format=duration,bit_rate")
-            .arg("-of")
-            .arg("default=noprint_wrappers=1:nokey=0")
-            .arg(input_path)
-            .output()
-            .map_err(|value| DefenderError::Video(format!("ffprobe failed to start: {value}")))?;
+        let output = crate::process::run_bounded(
+            Command::new(&self.policy.ffprobe_bin)
+                .args(["-protocol_whitelist", "file,pipe", "-threads", "2"])
+                .arg("-v")
+                .arg("error")
+                .arg("-select_streams")
+                .arg("v:0")
+                .arg("-show_entries")
+                .arg("stream=bit_rate:format=duration,bit_rate")
+                .arg("-of")
+                .arg("default=noprint_wrappers=1:nokey=0")
+                .arg(input_path),
+            Duration::from_secs(self.policy.ffmpeg_timeout_secs),
+        )
+        .map_err(|value| DefenderError::Video(format!("ffprobe execution failed: {value}")))?;
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
             return Err(DefenderError::Video(format!(
